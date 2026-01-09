@@ -21,7 +21,7 @@ const UserDataContext = () => {
   useEffect(() => {
     getCurrentUser();
   }, [dispatch, serverUrl]);
-  
+  return null;
 };
 
 export default UserDataContext;

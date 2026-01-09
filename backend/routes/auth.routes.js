@@ -10,6 +10,6 @@ import {
 
 AuthRouter.post("/signup", SignUp);
 AuthRouter.post("/login", Login);
-AuthRouter.post("/google-auth", googleAuth);
+AuthRouter.post("/google", googleAuth);
 AuthRouter.post("/logout", logout);
 export default AuthRouter;

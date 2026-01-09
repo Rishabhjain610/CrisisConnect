@@ -5,6 +5,10 @@ import { AuthDataContext } from "../context/AuthDataContext";
 import { Lock, Mail, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { toast } from "react-toastify";
+import { useDispatch } from "react-redux";
+import { setUserData } from "../redux/userSlice";
+import { signInWithPopup } from "firebase/auth";
+import { auth, provider } from "../utils/firebase.js";
 export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -13,6 +17,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { serverUrl } = useContext(AuthDataContext);
+  const dispatch = useDispatch();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,7 +34,7 @@ export default function SignUp() {
         { name, email, password },
         { withCredentials: true }
       );
-      
+        dispatch(setUserData(res.data.user));
         toast.success("Signup Successful");
         navigate("/");
       
@@ -42,7 +47,21 @@ export default function SignUp() {
   };
 
   const handleGoogleAuth = async () => {
-    // integrate google auth
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user=result.user;
+      const name=user.displayName;
+      const email=user.email;
+      const res=await axios.post(`${serverUrl}/api/auth/google`,{name,email},{withCredentials:true});
+      dispatch(setUserData(res.data.user));
+      toast.success("Google Sign-In Successful");
+      navigate("/");
+      
+    } catch (error) {
+      console.error("Google Sign-In Failed", error);
+      toast.error("Google Sign-In Failed");
+      
+    }
   };
 
   return (
