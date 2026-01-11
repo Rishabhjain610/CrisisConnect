@@ -4,7 +4,9 @@ import SignUp from "./components/SignUp.jsx";
 import Login from "./components/Login.jsx";
 import { ToastContainer } from "react-toastify";
 import Home from "./pages/Home.jsx";
-
+import Agency from "./pages/Agency.jsx";
+import Citizen from "./pages/Citizen.jsx";
+import Coordinator from "./pages/Coordinator.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 
@@ -14,7 +16,6 @@ import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 const App = () => {
-
   const userData = useSelector((state) => state.user.userData);
   const navigate = useNavigate();
   return (
@@ -36,8 +37,24 @@ const App = () => {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/signup" element={userData ? <Navigate to="/" /> : <SignUp />} />
-        <Route path="/login" element={userData ? <Navigate to="/" /> : <Login />} />
+        <Route
+          path="/signup"
+          element={userData ? <Navigate to="/" /> : <SignUp />}
+        />
+        <Route
+          path="/login"
+          element={userData ? <Navigate to="/" /> : <Login />}
+        />
+        
+        {userData && userData.role === "citizen" && (
+          <Route path="/citizenhome" element={<Citizen />} />
+        )}
+        {userData && userData.role === "agency" && (
+          <Route path="/agencyhome" element={<Agency />} />
+        )}
+        {userData && userData.role === "coordinator" && (
+          <Route path="/coordinatorhome" element={<Coordinator />} />
+        )}
       </Routes>
       <Footer />
     </div>

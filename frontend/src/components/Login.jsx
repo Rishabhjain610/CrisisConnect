@@ -55,7 +55,7 @@ export default function Login() {
       );
       dispatch(setUserData(res.data.user));
       toast.success("Google Sign-In Successful");
-      navigate("/");
+      
     } catch (error) {
       console.error("Google Sign-In Failed", error);
       toast.error("Google Sign-In Failed");

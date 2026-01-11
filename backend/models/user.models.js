@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true
+    
   },
   phone: {
     type: String,
@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['citizen', 'admin', 'agency', 'coordinator'],
+    enum: ['citizen', 'agency', 'coordinator'],
     default: 'citizen'
   }
 }, { timestamps: true });

@@ -36,7 +36,7 @@ export default function SignUp() {
       );
         dispatch(setUserData(res.data.user));
         toast.success("Signup Successful");
-        navigate("/");
+       
       
     } catch (err) {
       toast.error("Signup Failed");
