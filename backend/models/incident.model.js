@@ -26,4 +26,5 @@ const incidentSchema = new mongoose.Schema({
 // Create a geospatial index for fast map queries
 incidentSchema.index({ location: '2dsphere' });
 
-export const Incident = mongoose.model("Incident", incidentSchema);
+const Incident = mongoose.model("Incident", incidentSchema);
+export default Incident;

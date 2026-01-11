@@ -1,6 +1,6 @@
-import { Incident } from "../models/incident.model.js";
-import { Resource } from "../models/resource.model.js";
-import { GoogleGenerativeAI } from "@google-generative-ai";
+import Incident from "../models/incident.model.js";
+import Resource from "../models/resource.model.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import twilio from "twilio";
 import dotenv from "dotenv";
 
