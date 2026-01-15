@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import { Navigate } from "react-router-dom";
+import NewsSummarizer from "./components/NewsSummarizer.jsx";
 const App = () => {
   const userData = useSelector((state) => state.user.userData);
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ const App = () => {
           path="/login"
           element={userData ? <Navigate to="/" /> : <Login />}
         />
+        <Route path="/crises" element={<NewsSummarizer />} />
         
         {userData && userData.role === "citizen" && (
           <Route path="/citizenhome" element={<Citizen />} />

@@ -24,7 +24,7 @@ const Navbar = () => {
   if (!userData) {
     navLinks = [
       { name: "Home", href: "/", icon: <IoHomeOutline size={20} /> },
-      { name: "Live Map", href: "/map", icon: <IoMapOutline size={20} /> },
+      { name: "Crises Updates", href: "/crises", icon: <IoMapOutline size={20} /> },
       { name: "Resources", href: "/resources", icon: <IoPeopleOutline size={20} /> },
       { name: "Contact", href: "/contact", icon: <IoListOutline size={20} /> },
     ];
@@ -33,7 +33,7 @@ const Navbar = () => {
       { name: "Dashboard", href: "/citizenhome", icon: <IoHomeOutline size={20} /> },
       { name: "Report", href: "/citizen/report", icon: <IoListOutline size={20} /> },
       { name: "My Incidents", href: "/citizen/incidents", icon: <IoMapOutline size={20} /> },
-      { name: "Live Map", href: "/citizen/map", icon: <IoMapOutline size={20} /> },
+      { name: "Map", href: "/citizen/map", icon: <IoMapOutline size={20} /> },
     ];
   } else if (userData.role === "agency") {
     navLinks = [

@@ -6,6 +6,7 @@ import cors from "cors";
 import UserRouter from "./routes/user.routes.js";
 import CrisisRouter from "./routes/crisis.routes.js";
 import cookieParser from "cookie-parser";
+import NewsRouter from "./routes/new.routes.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,7 +24,7 @@ app.use(cors({
 )
 app.use("/api/auth", AuthRouter);
 app.use("/api/user", UserRouter);
-
+app.use("/api/news", NewsRouter);
 app.use("/api/crisis", CrisisRouter);
 
 
