@@ -85,10 +85,18 @@ const analyzeWithOllama = async (
 ) => {
   try {
     const payload = { model, prompt, stream: false };
-    if (options.images && Array.isArray(options.images) && options.images.length > 0) {
+    if (
+      options.images &&
+      Array.isArray(options.images) &&
+      options.images.length > 0
+    ) {
       payload.images = options.images;
     }
-    const resp = await axios.post("http://localhost:11434/api/generate", payload, { timeout: 30000 });
+    const resp = await axios.post(
+      "http://localhost:11434/api/generate",
+      payload,
+      { timeout: 90000 }
+    );
     return resp?.data?.response?.trim() || "";
   } catch (err) {
     console.error("analyzeWithOllama error:", err?.message || err);
@@ -125,22 +133,35 @@ export const createIncident = async (req, res) => {
       });
     }
 
-    if (!req.userId) return res.status(401).json({ message: "Authentication required to report incidents" });
+    if (!req.userId)
+      return res
+        .status(401)
+        .json({ message: "Authentication required to report incidents" });
 
     if (!mode || !["VOICE", "IMAGE_TEXT"].includes(mode)) {
-      return res.status(400).json({ message: "mode must be either VOICE or IMAGE_TEXT" });
+      return res
+        .status(400)
+        .json({ message: "mode must be either VOICE or IMAGE_TEXT" });
     }
 
     if (typeof latitude === "undefined" || typeof longitude === "undefined") {
-      return res.status(400).json({ message: "latitude and longitude are required" });
+      return res
+        .status(400)
+        .json({ message: "latitude and longitude are required" });
     }
 
     if (mode === "VOICE" && !transcript) {
-      return res.status(400).json({ message: "transcript is required for VOICE mode" });
+      return res
+        .status(400)
+        .json({ message: "transcript is required for VOICE mode" });
     }
 
     if (mode === "IMAGE_TEXT" && !imageBase64 && !req.file) {
-      return res.status(400).json({ message: "image file or imageBase64 is required for IMAGE_TEXT mode" });
+      return res
+        .status(400)
+        .json({
+          message: "image file or imageBase64 is required for IMAGE_TEXT mode",
+        });
     }
 
     let imageUrl;
@@ -161,7 +182,9 @@ export const createIncident = async (req, res) => {
 
       const dataUri = `data:image/jpeg;base64,${cleanedBase64}`;
       try {
-        const upload = await cloudinary.uploader.upload(dataUri, { folder: "crisis_connect/incidents" });
+        const upload = await cloudinary.uploader.upload(dataUri, {
+          folder: "crisis_connect/incidents",
+        });
         imageUrl = upload.secure_url;
       } catch (err) {
         console.error("Cloudinary upload failed:", err?.message || err);
@@ -174,16 +197,23 @@ Analyze the image and return a short plain-text response containing:
 - Severity (Low, Medium, High, Critical)
 - One-line summary of visible evidence.`;
 
-      analysisText = await analyzeWithOllama(visionPrompt, "gemma3:4b", { images: [cleanedBase64] });
+      analysisText = await analyzeWithOllama(visionPrompt, "gemma3:4b", {
+        images: [cleanedBase64],
+      });
     }
 
     // VOICE: store original transcript, translate, then analyze translated text
     if (mode === "VOICE") {
       const original = transcript;
       const translatePrompt = `Translate the following text to English. Return only the translated text (no extra commentary):\n\n${original}`;
-      translatedTranscript = await analyzeWithOllama(translatePrompt, "qwen3-coder:480b-cloud");
+      translatedTranscript = await analyzeWithOllama(
+        translatePrompt,
+        "qwen3-coder:480b-cloud",
+      );
 
-      const textForAnalysis = translatedTranscript?.trim() ? translatedTranscript : original;
+      const textForAnalysis = translatedTranscript?.trim()
+        ? translatedTranscript
+        : original;
 
       const textPrompt = `You are a concise text assistant for crisis reporting.
 Analyze the following emergency report and return a short plain-text response containing:
@@ -193,7 +223,10 @@ Analyze the following emergency report and return a short plain-text response co
 
 Report: "${textForAnalysis}"`;
 
-      analysisText = await analyzeWithOllama(textPrompt, "qwen3-coder:480b-cloud");
+      analysisText = await analyzeWithOllama(
+        textPrompt,
+        "qwen3-coder:480b-cloud",
+      );
     }
 
     // Extract type if not provided
@@ -217,17 +250,31 @@ Report: "${textForAnalysis}"`;
       else if (s.includes("low")) extractedSeverity = "Low";
     }
 
-    const trustScore = await calcTrustScore(req.userId, !!imageUrl, Number(latitude), Number(longitude));
+    const trustScore = await calcTrustScore(
+      req.userId,
+      !!imageUrl,
+      Number(latitude),
+      Number(longitude),
+    );
 
     const incidentData = {
       type: resolvedType || "Other",
-      description: description || (mode === "VOICE" ? (translatedTranscript || transcript) : analysisText) || "",
+      description:
+        description ||
+        (mode === "VOICE"
+          ? translatedTranscript || transcript
+          : analysisText) ||
+        "",
       severity: extractedSeverity,
       mode,
       transcript: mode === "VOICE" ? transcript : undefined,
-      translatedTranscript: mode === "VOICE" ? (translatedTranscript || "") : undefined,
+      translatedTranscript:
+        mode === "VOICE" ? translatedTranscript || "" : undefined,
       imageUrl: imageUrl || undefined,
-      location: { type: "Point", coordinates: [Number(longitude), Number(latitude)] },
+      location: {
+        type: "Point",
+        coordinates: [Number(longitude), Number(latitude)],
+      },
       reportedBy: req.userId,
       trustScore,
       status: "Pending",
@@ -244,7 +291,12 @@ Report: "${textForAnalysis}"`;
     });
   } catch (err) {
     console.error("createIncident error:", err?.message || err);
-    return res.status(500).json({ message: "Internal server error", error: err?.message || String(err) });
+    return res
+      .status(500)
+      .json({
+        message: "Internal server error",
+        error: err?.message || String(err),
+      });
   }
 };
 
@@ -275,8 +327,12 @@ export const getIncidents = async (req, res) => {
 export const getIncidentById = async (req, res) => {
   try {
     const { incidentId } = req.params;
-    const incident = await Incident.findById(incidentId).populate("reportedBy", "name email phone role");
-    if (!incident) return res.status(404).json({ message: "Incident not found" });
+    const incident = await Incident.findById(incidentId).populate(
+      "reportedBy",
+      "name email phone role",
+    );
+    if (!incident)
+      return res.status(404).json({ message: "Incident not found" });
     return res.status(200).json({ incident });
   } catch (err) {
     console.error("getIncidentById error:", err?.message || err);
@@ -289,11 +345,13 @@ export const updateIncidentStatus = async (req, res) => {
     const { incidentId } = req.params;
     const { status, respondedBy, dispatchedResources } = req.body;
     const incident = await Incident.findById(incidentId);
-    if (!incident) return res.status(404).json({ message: "Incident not found" });
+    if (!incident)
+      return res.status(404).json({ message: "Incident not found" });
 
     if (status) incident.status = status;
     if (respondedBy) incident.respondedBy = respondedBy;
-    if (dispatchedResources && Array.isArray(dispatchedResources)) incident.dispatchedResources = dispatchedResources;
+    if (dispatchedResources && Array.isArray(dispatchedResources))
+      incident.dispatchedResources = dispatchedResources;
 
     await incident.save();
     await incident.populate("reportedBy", "name email phone role");
@@ -309,7 +367,8 @@ export const markIncidentSpam = async (req, res) => {
   try {
     const { incidentId } = req.params;
     const incident = await Incident.findById(incidentId);
-    if (!incident) return res.status(404).json({ message: "Incident not found" });
+    if (!incident)
+      return res.status(404).json({ message: "Incident not found" });
     incident.status = "Spam";
     await incident.save();
     return res.status(200).json({ message: "Marked as spam", incident });
@@ -327,7 +386,8 @@ export const getNearbyIncidents = async (req, res) => {
   try {
     const lat = Number(req.params.lat);
     const lon = Number(req.params.lon);
-    if (Number.isNaN(lat) || Number.isNaN(lon)) return res.status(400).json({ message: "Invalid coordinates" });
+    if (Number.isNaN(lat) || Number.isNaN(lon))
+      return res.status(400).json({ message: "Invalid coordinates" });
 
     const radiusMeters = Number(req.query.radius) || 5000; // default 5km
     const earthRadiusMeters = 6378137;
@@ -356,7 +416,8 @@ export const deleteIncident = async (req, res) => {
   try {
     const { incidentId } = req.params;
     const incident = await Incident.findByIdAndDelete(incidentId);
-    if (!incident) return res.status(404).json({ message: "Incident not found" });
+    if (!incident)
+      return res.status(404).json({ message: "Incident not found" });
     return res.status(200).json({ message: "Incident deleted" });
   } catch (err) {
     console.error("deleteIncident error:", err?.message || err);
@@ -370,7 +431,10 @@ export const getIncidentStats = async (req, res) => {
     const byStatus = await Incident.aggregate([
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
-    const recent = await Incident.find().sort({ createdAt: -1 }).limit(10).lean();
+    const recent = await Incident.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
     return res.status(200).json({ total, byStatus, recent });
   } catch (err) {
     console.error("getIncidentStats error:", err?.message || err);
