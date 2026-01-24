@@ -300,7 +300,7 @@ const Navbar = () => {
     navLinks = [
       { name: "Dashboard", href: "/citizenhome", icon: <IoHomeOutline size={20} /> },
       { name: "Report", href: "/sos", icon: <AlertCircle size={20} /> },
-      { name: "My Incidents", href: "/citizen/incidents", icon: <IoListOutline size={20} /> },
+      { name: "My Incidents", href: "/citizenown", icon: <IoListOutline size={20} /> },
       { name: "Map", href: "/map", icon: <IoMapOutline size={20} /> },
     ];
   } else if (userData.role === "agency") {

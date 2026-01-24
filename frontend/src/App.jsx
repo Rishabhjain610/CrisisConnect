@@ -20,6 +20,7 @@ import NewsSummarizer from "./components/NewsSummarizer.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import Maps from "./components/Maps.jsx";
 import ContactUs from "./components/ContactUs.jsx";
+import CitizenOwn from "./pages/CitizenOwn.jsx";
 const App = () => {
   const userData = useSelector((state) => state.user.userData);
   const navigate = useNavigate();
@@ -58,6 +59,7 @@ const App = () => {
             <Route path="/sos" element={<Sos />} />
             <Route path="/imagetext" element={<ImageTextInput />} />
             <Route path="/map" element={<Maps />} />
+            <Route path="/citizenown" element={<CitizenOwn />} />
           </>
         )}
         {userData && userData.role === "agency" && (
