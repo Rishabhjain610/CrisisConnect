@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 import NewsSummarizer from "./components/NewsSummarizer.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
-
+import Maps from "./components/Maps.jsx";
 const App = () => {
   const userData = useSelector((state) => state.user.userData);
   const navigate = useNavigate();
@@ -56,6 +56,7 @@ const App = () => {
           <Route path="/citizenhome" element={<Citizen />} />
           <Route path="/sos" element={<Sos />} />
           <Route path="/imagetext" element={<ImageTextInput />} />
+          <Route path="/map" element={<Maps />} />
           </>
         )}
         {userData && userData.role === "agency" && (
