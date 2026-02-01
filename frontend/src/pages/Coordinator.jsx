@@ -3,204 +3,202 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { AuthDataContext } from "../context/AuthDataContext";
 import {
-  Package, Activity, Truck, AlertOctagon, Box, ArrowUpRight,
-  ShieldCheck, MapPin, Clock
+  Package, Activity, Truck, AlertOctagon, ArrowUpRight,
+  MapPin, Clock, ExternalLink, RefreshCw
 } from "lucide-react";
 import CoordinatorRequests from "../components/CoordinatorRequests";
 
-// Modern Stat Card
-const StatCard = ({ title, value, icon: Icon, color, subtext, trend }) => (
-  <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all group">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`p-3.5 rounded-2xl ${color} bg-opacity-10 group-hover:scale-110 transition-transform duration-300`}>
-        <Icon className={`w-6 h-6 ${color.replace("bg-", "text-")}`} />
-      </div>
-      {trend && (
-        <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-          <ArrowUpRight size={12} /> {trend}
-        </span>
-      )}
-    </div>
+// --- Dynamic Stat Card Component ---
+const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
+  <div className="bg-white border border-zinc-100 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex items-start justify-between group">
     <div>
-      <h3 className="text-zinc-500 text-sm font-medium mb-1">{title}</h3>
-      <p className="text-4xl font-bold text-zinc-900 tracking-tight">{value}</p>
+      <h3 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">{title}</h3>
+      <p className="text-3xl font-extrabold text-zinc-900 tracking-tight mt-1">{value}</p>
       {subtext && <p className="text-xs text-zinc-400 mt-2 font-medium">{subtext}</p>}
+    </div>
+    <div className={`p-3 rounded-xl ${color} bg-opacity-10 group-hover:scale-110 transition-transform`}>
+      <Icon className={`w-6 h-6 ${color.replace("bg-", "text-")}`} />
     </div>
   </div>
 );
 
 const Coordinator = () => {
   const { serverUrl } = useContext(AuthDataContext);
-  // Store full list of resources to render the bottom list
   const [allResources, setAllResources] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, available: 0, reserved: 0, deployed: 0, maintenance: 0 });
 
+  // --- Fetch Data ---
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get(`${serverUrl}/api/resource/my-list`, { withCredentials: true });
+      const data = res.data.resources;
+
+      setAllResources(data);
+      setStats({
+        total: data.length,
+        available: data.filter(r => r.status === 'Available').length,
+        reserved: data.filter(r => r.status === 'Reserved').length,
+        deployed: data.filter(r => r.status === 'Deployed').length,
+        maintenance: data.filter(r => r.status === 'Maintenance').length,
+      });
+      setLoading(false);
+    } catch (err) {
+      console.error("Stats fetch error:", err);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await axios.get(`${serverUrl}/api/resource/my-list`, { withCredentials: true });
-        const data = res.data.resources;
-
-        setAllResources(data); // Save full list for the "Active Deployments" section
-
-        setStats({
-          total: data.length,
-          available: data.filter(r => r.status === 'Available').length,
-          reserved: data.filter(r => r.status === 'Reserved').length,
-          deployed: data.filter(r => r.status === 'Deployed').length,
-          maintenance: data.filter(r => r.status === 'Maintenance').length,
-        });
-      } catch (err) {
-        console.error("Stats fetch error:", err);
-      }
-    };
-
     fetchStats();
-    // Optional: Poll every 5s to keep stats synced
-    const interval = setInterval(fetchStats, 5000);
+    const interval = setInterval(fetchStats, 5000); // Poll every 5s for live updates
     return () => clearInterval(interval);
   }, [serverUrl]);
 
-  // Filter for the list view
+  // Filter for the bottom list view
   const activeDeployments = allResources.filter(r => r.status === 'Deployed');
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 pt-20 pb-12 px-6">
-      <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+    <div className="min-h-screen bg-zinc-50 pt-24 pb-12 px-6 font-sans">
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-        {/* Dashboard Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        {/* --- 1. Header Section --- */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-200 pb-6">
           <div>
-            <h1 className="text-4xl font-bold text-zinc-900 tracking-tight mb-2">Coordinator Command</h1>
-            <p className="text-zinc-500 text-lg">Overview of logistics, assets, and active deployments.</p>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-xs font-bold text-green-600 uppercase tracking-wide">Live Operations Center</span>
+            </div>
+            <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">Coordinator Command</h1>
+            <p className="text-zinc-500 mt-2 text-sm max-w-lg">
+              Monitor active missions, approve resource requests, and manage your logistics inventory in real-time.
+            </p>
           </div>
           <div className="flex gap-3">
+            <button
+              onClick={fetchStats}
+              className="bg-white border border-zinc-200 text-zinc-600 px-4 py-3 rounded-xl font-bold hover:bg-zinc-50 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            </button>
             <Link
               to="/coordinator/manage"
-              className="bg-zinc-900 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-xl shadow-zinc-200 active:scale-95"
+              className="bg-zinc-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-lg shadow-zinc-200 active:scale-95"
             >
               <Package className="w-5 h-5" /> Manage Inventory
             </Link>
           </div>
         </div>
 
-        {/* Live Alerts Section */}
-        <div className="bg-white/40 backdrop-blur-md rounded-3xl p-1 border border-white/50">
+        {/* --- 2. CRITICAL ALERTS (Top Priority) --- */}
+        <div className="space-y-4">
+          {/* CoordinatorRequests component handles its own "Empty State", so we just wrap it */}
           <CoordinatorRequests />
         </div>
 
-        {/* Analytics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* --- 3. Live Statistics Grid --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Assets"
             value={stats.total}
-            icon={Box}
+            icon={Package}
             color="bg-blue-500"
-            subtext="Registered in database"
+            subtext="Items in database"
           />
           <StatCard
             title="Ready to Deploy"
             value={stats.available}
             icon={Activity}
             color="bg-emerald-500"
-            subtext="Available for immediate dispatch"
+            subtext="Available immediately"
           />
           <StatCard
             title="Active Missions"
-            // 👇 FIXED: Was pointing to stats.reserved, now points to stats.deployed
             value={stats.deployed}
             icon={Truck}
             color="bg-indigo-500"
-            subtext="Currently deployed on field"
+            subtext="Currently en route"
           />
           <StatCard
             title="Maintenance"
             value={stats.maintenance}
             icon={AlertOctagon}
             color="bg-amber-500"
-            subtext="Unavailable / Under repair"
+            subtext="Unavailable / Repair"
           />
         </div>
 
-        {/* 🔥 NEW SECTION: Active Deployments List */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
-              <Truck className="text-indigo-600" /> Live Field Operations
+        {/* --- 4. Active Field Operations List --- */}
+        <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
+          <div className="p-6 border-b border-zinc-100 flex justify-between items-center">
+            <h2 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+              <Truck size={20} className="text-indigo-600" />
+              Live Field Operations
             </h2>
+            <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md">
+              {activeDeployments.length} Active
+            </span>
+          </div>
 
+          <div className="p-2">
             {activeDeployments.length === 0 ? (
-              <div className="bg-white/60 border border-zinc-200 rounded-3xl p-12 text-center">
-                <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-400">
-                  <Truck size={32} />
+              <div className="py-16 text-center">
+                <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-100">
+                  <Truck size={24} className="text-zinc-300" />
                 </div>
-                <h3 className="text-lg font-bold text-zinc-900">No Active Deployments</h3>
-                <p className="text-zinc-500">All assets are currently in storage or maintenance.</p>
+                <h3 className="text-zinc-900 font-bold">No Active Deployments</h3>
+                <p className="text-zinc-500 text-sm mt-1">All resources are currently at base.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-2">
                 {activeDeployments.map((resource) => (
-                  <div key={resource._id} className="bg-white border border-indigo-100 p-6 rounded-3xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                        <Truck size={24} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-lg text-zinc-900">{resource.item_name}</h3>
-                          <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                            En Route
-                          </span>
+                  <div key={resource._id} className="group bg-white border border-zinc-200 hover:border-indigo-300 p-5 rounded-2xl transition-all hover:shadow-md">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                          <Truck size={20} />
                         </div>
-                        <p className="text-sm text-zinc-500 flex items-center gap-4">
-                          <span className="flex items-center gap-1"><Package size={14} /> {resource.quantity} Units</span>
-                          <span className="flex items-center gap-1"><MapPin size={14} /> {resource.location?.coordinates[1].toFixed(4)}, {resource.location?.coordinates[0].toFixed(4)}</span>
-                        </p>
+                        <div>
+                          <h3 className="font-bold text-zinc-900">{resource.item_name}</h3>
+                          <p className="text-xs text-zinc-500 font-medium uppercase">{resource.category}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                        <Clock size={12} />
+                        EN ROUTE
                       </div>
                     </div>
 
-                    <div className="w-full md:w-auto pl-14 md:pl-0">
-                      <div className="text-xs text-zinc-400 font-mono mb-1">DEPLOYED AT</div>
-                      <div className="flex items-center gap-1 text-sm font-semibold text-zinc-700">
-                        <Clock size={14} />
-                        {new Date(resource.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm p-2 bg-zinc-50 rounded-lg">
+                        <span className="text-zinc-500">Quantity</span>
+                        <span className="font-bold text-zinc-900">{resource.quantity} Units</span>
                       </div>
+
+                      {resource.location && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-400 mt-2 px-1">
+                          <MapPin size={12} />
+                          <span className="font-mono">
+                            {resource.location.coordinates[1].toFixed(4)}, {resource.location.coordinates[0].toFixed(4)}
+                          </span>
+                          <a
+                            href={`https://www.google.com/maps?q=${resource.location.coordinates[1]},${resource.location.coordinates[0]}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ml-auto text-indigo-600 hover:underline flex items-center gap-1"
+                          >
+                            Track <ExternalLink size={10} />
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-
-          {/* System Status Card (Existing) */}
-          <div className="relative overflow-hidden rounded-3xl p-8 bg-gradient-to-br from-zinc-900 to-zinc-800 text-white flex flex-col justify-between shadow-2xl shadow-zinc-500/20 h-fit">
-            <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-            <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl"></div>
-
-            <div className="mb-8">
-              <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]"></div>
-                System Online
-              </h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Your inventory is synchronized. Agency Commanders can view your real-time asset locations.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm border-b border-white/10 pb-2">
-                <span className="text-zinc-400">Connection</span>
-                <span className="font-mono text-emerald-400">Secure (TLS)</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-zinc-400">Sync Rate</span>
-                <span className="font-mono text-blue-400">24ms</span>
-              </div>
-            </div>
-          </div>
-
         </div>
+
       </div>
     </div>
   );
