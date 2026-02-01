@@ -22,11 +22,11 @@ const Footer = () => {
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center">
-                <AlertCircle className="text-white" size={24} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                <img src="/connection.png" alt="logo" width={42} height={42} />
               </div>
               <span className="text-2xl font-bold text-gray-900">
-                CrisisAlert
+                CrisisConnect
               </span>
             </div>
             <p className="text-gray-600 text-sm leading-relaxed max-w-xs">
