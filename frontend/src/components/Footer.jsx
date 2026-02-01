@@ -135,8 +135,8 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-gray-600">
               <li className="flex items-center gap-3 hover:text-blue-600 transition-colors">
                 <Mail size={16} className="text-blue-600 flex-shrink-0" />
-                <a href="mailto:support@crisisalert.com">
-                  support@crisisalert.com
+                <a href="mailto:support@crisisconnect.com">
+                  support@crisisconnect.com
                 </a>
               </li>
               <li className="flex items-center gap-3 hover:text-blue-600 transition-colors">
@@ -194,7 +194,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
               <p className="text-xs text-gray-500 font-medium">
-                © {currentYear} CrisisAlert. All rights reserved. | Saving lives
+                © {currentYear} CrisisConnect. All rights reserved. | Saving lives
                 through real-time emergency response
               </p>
             </div>
