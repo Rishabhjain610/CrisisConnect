@@ -182,22 +182,30 @@ const Citizen = () => {
           </div>
 
           {/* Avg Trust Score */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium mb-1">Avg Trust</p>
-                <p className="text-4xl font-bold text-purple-600">
-                  {userIncidents.length > 0 
-                    ? Math.round(userIncidents.reduce((sum, i) => sum + i.trustScore, 0) / userIncidents.length)
-                    : 0}%
-                </p>
-                <p className="text-xs text-gray-500 mt-2">Report credibility</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
+         <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition">
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-gray-600 text-sm font-medium mb-1">Avg Trust</p>
+      <p className="text-4xl font-bold text-purple-600">
+        {userIncidents.length > 0 
+          ? Math.round(
+              userIncidents.reduce((sum, i) => {
+                // ✅ Handle both number and object trustScore
+                const score = typeof i.trustScore === 'object' 
+                  ? i.trustScore.totalScore || 0 
+                  : i.trustScore || 0;
+                return sum + score;
+              }, 0) / userIncidents.length
+            )
+          : 0}%
+      </p>
+      <p className="text-xs text-gray-500 mt-2">Report credibility</p>
+    </div>
+    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+      <TrendingUp className="w-6 h-6 text-purple-600" />
+    </div>
+  </div>
+</div>
         </div>
 
         {/* Charts Section */}
@@ -329,10 +337,11 @@ const Citizen = () => {
                           {incident.status}
                         </span>
                       </td>
-                      <td className="py-4 font-medium text-gray-900">{incident.trustScore}%</td>
-                      <td className="py-4 text-gray-600 text-sm">
-                        {new Date(incident.createdAt).toLocaleDateString()}
-                      </td>
+                      <td className="py-4 font-medium text-gray-900">
+  {typeof incident.trustScore === 'object' 
+    ? incident.trustScore.totalScore || 'N/A'
+    : incident.trustScore || 'N/A'}%
+</td>
                     </tr>
                   ))}
                 </tbody>

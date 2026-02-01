@@ -1,26 +1,33 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import React from "react";
+import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
-  ShieldAlert, Activity, Map, Mic, Zap,
-  ArrowRight, Users, Radio, Globe, CheckCircle2
-} from 'lucide-react';
-import { BackgroundRippleEffect } from '../components/ui/background-ripple-effect';
+  ShieldAlert,
+  Activity,
+  Map,
+  Mic,
+  Zap,
+  ArrowRight,
+  Users,
+  Radio,
+  Globe,
+  CheckCircle2,
+} from "lucide-react";
+import { BackgroundRippleEffect } from "../components/ui/background-ripple-effect";
 
 const Home = () => {
   const { userData } = useSelector((state) => state.user);
 
   // Dynamic Dashboard Link based on Role
   const getDashboardLink = () => {
-    if (!userData) return '/login';
-    if (userData.role === 'agency') return '/agencyhome';
-    if (userData.role === 'coordinator') return '/coordinatorhome';
-    return '/citizenhome';
+    if (!userData) return "/login";
+    if (userData.role === "agency") return "/agencyhome";
+    if (userData.role === "coordinator") return "/coordinatorhome";
+    return "/citizenhome";
   };
 
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-blue-100 selection:text-blue-900">
-
       {/* --- HERO SECTION --- */}
       <section className="relative pt-32 pb-20 px-6 lg:px-8 overflow-hidden">
         {/* Background Decorative Blobs */}
@@ -77,19 +84,27 @@ const Home = () => {
         <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="text-center">
             <p className="text-3xl font-extrabold text-zinc-900">2.4s</p>
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">Avg. Response Time</p>
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">
+              Avg. Response Time
+            </p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-extrabold text-zinc-900">98%</p>
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">AI Accuracy</p>
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">
+              AI Accuracy
+            </p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-extrabold text-zinc-900">24/7</p>
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">System Uptime</p>
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">
+              System Uptime
+            </p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-extrabold text-zinc-900">50km</p>
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">Coverage Radius</p>
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mt-1">
+              Coverage Radius
+            </p>
           </div>
         </div>
       </div>
@@ -98,9 +113,12 @@ const Home = () => {
       <section className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-zinc-900 mb-4">Powered by Next-Gen Tech</h2>
+            <h2 className="text-3xl font-bold text-zinc-900 mb-4">
+              Powered by Next-Gen Tech
+            </h2>
             <p className="text-zinc-500 max-w-lg mx-auto">
-              We leverage geolocation, AI transcription, and smart resource allocation to save lives.
+              We leverage geolocation, AI transcription, and smart resource
+              allocation to save lives.
             </p>
           </div>
 
@@ -110,9 +128,12 @@ const Home = () => {
               <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-600 mb-6">
                 <Mic size={24} />
               </div>
-              <h3 className="text-xl font-bold text-zinc-900 mb-3">Voice SOS Analysis</h3>
+              <h3 className="text-xl font-bold text-zinc-900 mb-3">
+                Voice SOS Analysis
+              </h3>
               <p className="text-zinc-500 leading-relaxed">
-                Just speak. Our AI transcribes your emergency, detects severity, and alerts the nearest responders instantly.
+                Just speak. Our AI transcribes your emergency, detects severity,
+                and alerts the nearest responders instantly.
               </p>
             </div>
 
@@ -121,9 +142,12 @@ const Home = () => {
               <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mb-6">
                 <Users size={24} />
               </div>
-              <h3 className="text-xl font-bold text-zinc-900 mb-3">Smart Dispatch</h3>
+              <h3 className="text-xl font-bold text-zinc-900 mb-3">
+                Smart Dispatch
+              </h3>
               <p className="text-zinc-500 leading-relaxed">
-                Agencies can request specific resources (Ambulance, Firetruck) from nearby Coordinators with a single click.
+                Agencies can request specific resources (Ambulance, Firetruck)
+                from nearby Coordinators with a single click.
               </p>
             </div>
 
@@ -132,9 +156,12 @@ const Home = () => {
               <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center text-green-600 mb-6">
                 <Map size={24} />
               </div>
-              <h3 className="text-xl font-bold text-zinc-900 mb-3">Live Geo-Tracking</h3>
+              <h3 className="text-xl font-bold text-zinc-900 mb-3">
+                Live Geo-Tracking
+              </h3>
               <p className="text-zinc-500 leading-relaxed">
-                Real-time map visualization of incidents and resources ensures help reaches the exact location.
+                Real-time map visualization of incidents and resources ensures
+                help reaches the exact location.
               </p>
             </div>
           </div>
@@ -149,15 +176,19 @@ const Home = () => {
           </div>
 
           <div className="space-y-12 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-zinc-300 before:to-transparent">
-
             {/* Step 1 */}
             <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
               <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-zinc-200 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
                 <ShieldAlert size={18} className="text-zinc-500" />
               </div>
               <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-6 rounded-2xl shadow-sm border border-zinc-200">
-                <div className="font-bold text-zinc-900 mb-1">1. Report Incident</div>
-                <div className="text-zinc-500 text-sm">Citizen reports via Voice SOS or uploads an image. AI verifies the details.</div>
+                <div className="font-bold text-zinc-900 mb-1">
+                  1. Report Incident
+                </div>
+                <div className="text-zinc-500 text-sm">
+                  Citizen reports via Voice SOS or uploads an image. AI verifies
+                  the details.
+                </div>
               </div>
             </div>
 
@@ -167,8 +198,12 @@ const Home = () => {
                 <Zap size={18} className="text-white" />
               </div>
               <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-6 rounded-2xl shadow-sm border border-zinc-200">
-                <div className="font-bold text-zinc-900 mb-1">2. Agency Activation</div>
-                <div className="text-zinc-500 text-sm">Nearby Agencies receive the alert and Activate the mission.</div>
+                <div className="font-bold text-zinc-900 mb-1">
+                  2. Agency Activation
+                </div>
+                <div className="text-zinc-500 text-sm">
+                  Nearby Agencies receive the alert and Activate the mission.
+                </div>
               </div>
             </div>
 
@@ -178,11 +213,15 @@ const Home = () => {
                 <CheckCircle2 size={18} className="text-zinc-500" />
               </div>
               <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-6 rounded-2xl shadow-sm border border-zinc-200">
-                <div className="font-bold text-zinc-900 mb-1">3. Resource Deployment</div>
-                <div className="text-zinc-500 text-sm">Coordinators accept requests and deploy Ambulances/Rescue Teams to the field.</div>
+                <div className="font-bold text-zinc-900 mb-1">
+                  3. Resource Deployment
+                </div>
+                <div className="text-zinc-500 text-sm">
+                  Coordinators accept requests and deploy Ambulances/Rescue
+                  Teams to the field.
+                </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -198,22 +237,28 @@ const Home = () => {
             Ready to make a difference?
           </h2>
           <p className="text-zinc-400 max-w-2xl mx-auto mb-10 text-lg relative z-10">
-            Join the network of Citizens, Agencies, and Coordinators building a safer tomorrow.
+            Join the network of Citizens, Agencies, and Coordinators building a
+            safer tomorrow.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4 relative z-10">
             {!userData && (
-              <Link to="/signup" className="px-8 py-4 bg-white text-zinc-900 rounded-2xl font-bold hover:bg-zinc-100 transition-colors">
+              <Link
+                to="/signup"
+                className="px-8 py-4 bg-white text-zinc-900 rounded-2xl font-bold hover:bg-zinc-100 transition-colors"
+              >
                 Join as Citizen
               </Link>
             )}
-            <Link to="/contact" className="px-8 py-4 bg-zinc-800 text-white border border-zinc-700 rounded-2xl font-bold hover:bg-zinc-700 transition-colors">
+            <Link
+              to="/contact"
+              className="px-8 py-4 bg-zinc-800 text-white border border-zinc-700 rounded-2xl font-bold hover:bg-zinc-700 transition-colors"
+            >
               Contact Support
             </Link>
           </div>
         </div>
       </section>
-
     </div>
   );
 };

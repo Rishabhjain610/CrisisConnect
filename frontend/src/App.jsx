@@ -21,7 +21,7 @@ import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import Maps from "./components/Maps.jsx";
 import ContactUs from "./components/ContactUs.jsx";
 import CitizenOwn from "./pages/CitizenOwn.jsx";
-
+import ShakeSOS from "./components/ShakeSOS.jsx";
 import CoordinatorManage from './pages/CoordinatorManage.jsx';
 const App = () => {
   const userData = useSelector((state) => state.user.userData);
@@ -43,6 +43,7 @@ const App = () => {
       />
       <UserDataContext />
       <Navbar />
+      <ShakeSOS />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route

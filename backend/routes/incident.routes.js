@@ -1,7 +1,5 @@
 import express from "express";
-import isAuth from "../middleware/auth.middleware.js";
-import upload from "../middleware/multer.middleware.js";
-import { dispatchIncident } from "../controller/incident.controller.js";
+import multer from "multer";
 import {
   createIncident,
   getIncidents,
@@ -11,9 +9,14 @@ import {
   getNearbyIncidents,
   deleteIncident,
   getIncidentStats,
+  dispatchIncident,
 } from "../controller/incident.controller.js";
+import  isAuth  from "../middleware/auth.middleware.js";
 
 const IncidentRouter = express.Router();
+
+// Multer setup for image uploads
+const upload = multer({ dest: "uploads/" });
 
 // Stats (must be before :incidentId)
 IncidentRouter.get("/stats/summary", getIncidentStats);
@@ -27,6 +30,7 @@ IncidentRouter.get("/list", getIncidents);
 // Nearby
 IncidentRouter.get("/nearby/:lat/:lon", getNearbyIncidents);
 
+// Dispatch
 IncidentRouter.post("/:incidentId/dispatch", isAuth, dispatchIncident);
 
 // Single incident

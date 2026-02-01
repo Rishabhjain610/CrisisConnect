@@ -17,14 +17,20 @@ const PORT = process.env.PORT || 5000;
 
 ConnectDB();
 
-app.use(express.json());
-app.use(cookieParser());
+app.use(express.json({ limit: "50mb" }));
+app.use(cookieParser({limit: "50mb",extended:true}));
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: ["http://localhost:5173", "http://localhost:5174",
+      "http://192.168.31.166:5173",
+       
+      "http://192.168.31.166:8901",
+
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
