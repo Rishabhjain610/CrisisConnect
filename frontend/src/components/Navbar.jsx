@@ -96,8 +96,8 @@ const Navbar = () => {
               {userData && (
                 <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gray-100 border border-gray-200">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-xs text-gray-600 font-medium capitalize">
-                    {userData.name?.split(" ")[0] || userData.email?.split("@")[0]}
+                  <span className="text-xs font-light text-gray-600 font-medium capitalize">
+                    {userData.name || userData.email?.split("@")[0]}
                   </span>
                   <span className="text-xs text-blue-600 capitalize px-2 py-0.5 rounded-md bg-blue-100 font-semibold">
                     {userData.role}

@@ -1,5 +1,6 @@
 import Resource from "../models/resource.model.js";
 import Request from "../models/request.model.js";
+import Incident from "../models/incident.model.js";
 import User from "../models/user.models.js";
 import twilio from "twilio";
 import dotenv from "dotenv";
@@ -109,6 +110,10 @@ export const updateRequestStatus = async (req, res) => {
         const request = await Request.findById(requestId).populate("agencyId");
         if (!request) return res.status(404).json({ message: "Request not found" });
 
+        // --- FETCH INCIDENT FOR DESTINATION ---
+        const incident = await Incident.findById(request.incidentId);
+        if (!incident) return res.status(404).json({ message: "Target Incident not found" });
+
         if (request.status !== "Pending") {
             return res.status(400).json({ message: "Request already handled" });
         }
@@ -131,7 +136,7 @@ export const updateRequestStatus = async (req, res) => {
             return res.status(200).json({ message: "Request Rejected", request });
         }
 
-        // --- ACCEPTANCE LOGIC (PARTIAL FULFILLMENT) ---
+        // --- ACCEPTANCE LOGIC (WITH SIMULATION) ---
         if (status === "Accepted") {
             const requestedItems = request.resourcesRequested;
             const deployedLog = [];
@@ -139,25 +144,22 @@ export const updateRequestStatus = async (req, res) => {
             const remainingItems = [];
 
             for (const item of requestedItems) {
-                // Find matching AVAILABLE resource
                 const resource = await Resource.findOne({
                     owner: coordinatorId,
                     item_name: item.item_name,
                     status: "Available"
                 });
 
-                // Case 1: Resource Not Found or 0 Quantity
                 if (!resource || resource.quantity <= 0) {
                     failedLog.push(`${item.quantity}x ${item.item_name}`);
-                    remainingItems.push(item); // Keep in request
+                    remainingItems.push(item);
                     continue;
                 }
 
-                // Case 2: Partial or Full Deployment
                 const quantityToDeploy = Math.min(resource.quantity, item.quantity);
                 const quantityLeft = item.quantity - quantityToDeploy;
 
-                // Deduct from Inventory
+                // 1. Deduct Inventory
                 resource.quantity -= quantityToDeploy;
                 if (resource.quantity <= 0) {
                     await Resource.findByIdAndDelete(resource._id);
@@ -165,8 +167,8 @@ export const updateRequestStatus = async (req, res) => {
                     await resource.save();
                 }
 
-                // Create Deployed Record
-                await Resource.create({
+                // 2. Create Deployed Resource
+                const deployedResource = await Resource.create({
                     owner: coordinatorId,
                     item_name: item.item_name,
                     category: item.category,
@@ -176,10 +178,16 @@ export const updateRequestStatus = async (req, res) => {
                     location: resource.location
                 });
 
-                // Log Success
+                // 3. START SIMULATION (Base -> Incident)
+                // We use "fire and forget" so the response is instant
+                simulateMovement(
+                    deployedResource._id,
+                    resource.location.coordinates, // Start (Coordinator Base)
+                    incident.location.coordinates  // End (Incident Site)
+                );
+
                 deployedLog.push(`${quantityToDeploy}x ${item.item_name}`);
 
-                // If we couldn't fulfill strictly all of it, keep the remainder in the ticket
                 if (quantityLeft > 0) {
                     item.quantity = quantityLeft;
                     remainingItems.push(item);
@@ -187,29 +195,16 @@ export const updateRequestStatus = async (req, res) => {
                 }
             }
 
-            // --- DATABASE UPDATE ---
-            // If we deployed SOMETHING, we mark it accepted/processed.
-            // We update 'resourcesRequested' to ONLY show what is still missing.
             request.status = "Accepted";
-            request.resourcesRequested = remainingItems; // Update the ticket to show what's left
+            request.resourcesRequested = remainingItems;
             await request.save();
 
-            // --- SMART SMS NOTIFICATION ---
+            // Notify Agency
             const agency = request.agencyId;
             if (client && agency?.phone) {
                 let msgBody = `Updates for Incident #${request.incidentId.toString().slice(-4)}:\n`;
-
-                if (deployedLog.length > 0) {
-                    msgBody += `✅ ON THE WAY: ${deployedLog.join(", ")}\n`;
-                }
-
-                if (failedLog.length > 0) {
-                    msgBody += `⚠️ UNAVAILABLE (Try another Coord): ${failedLog.join(", ")}`;
-                }
-
-                if (deployedLog.length === 0 && failedLog.length > 0) {
-                    msgBody = `❌ FAILED: Coordinator has NO inventory for: ${failedLog.join(", ")}`;
-                }
+                if (deployedLog.length > 0) msgBody += `✅ ON THE WAY: ${deployedLog.join(", ")}\n`;
+                if (failedLog.length > 0) msgBody += `⚠️ UNAVAILABLE: ${failedLog.join(", ")}`;
 
                 try {
                     await client.messages.create({
@@ -217,13 +212,11 @@ export const updateRequestStatus = async (req, res) => {
                         from: process.env.TWILIO_PHONE_NUMBER,
                         to: agency.phone
                     });
-                } catch (smsErr) {
-                    console.error("Twilio Error:", smsErr.message);
-                }
+                } catch (smsErr) { console.error("Twilio Error:", smsErr.message); }
             }
 
             return res.status(200).json({
-                message: "Request processed",
+                message: "Request processed & Simulation Started",
                 deployed: deployedLog,
                 remaining: remainingItems
             });
@@ -267,3 +260,45 @@ export const getAgencyRequests = async (req, res) => {
         return res.status(500).json({ message: "Error fetching history" });
     }
 };
+
+
+// --- MOVEMENT SIMULATION ENGINE ---
+const simulateMovement = async (resourceId, startCoords, endCoords) => {
+    const steps = 20; // Move in 20 steps
+    const intervalTime = 3000; // Update every 3 seconds (Total 60s trip)
+
+    // Calculate Step Size (Linear Interpolation)
+    const dLat = (endCoords[1] - startCoords[1]) / steps;
+    const dLng = (endCoords[0] - startCoords[0]) / steps;
+
+    let currentStep = 0;
+    let currentLat = startCoords[1];
+    let currentLng = startCoords[0];
+
+    const timer = setInterval(async () => {
+        currentStep++;
+        currentLat += dLat;
+        currentLng += dLng;
+
+        try {
+            if (currentStep >= steps) {
+                // ARRIVAL: Snap to exact end location
+                await Resource.findByIdAndUpdate(resourceId, {
+                    location: { type: "Point", coordinates: [endCoords[0], endCoords[1]] }
+                });
+                clearInterval(timer);
+                console.log(`Resource ${resourceId} has ARRIVED.`);
+            } else {
+                // MOVING: Update location
+                await Resource.findByIdAndUpdate(resourceId, {
+                    location: { type: "Point", coordinates: [currentLng, currentLat] }
+                });
+            }
+        } catch (err) {
+            console.error("Simulation Error:", err);
+            clearInterval(timer);
+        }
+    }, intervalTime);
+};
+
+

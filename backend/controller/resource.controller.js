@@ -1,6 +1,6 @@
 import Resource from "../models/resource.model.js";
 import User from "../models/user.models.js";
-import Incident from "../models/incident.model.js"; 
+import Incident from "../models/incident.model.js";
 
 // Create a new resource
 export const createResource = async (req, res) => {
@@ -85,44 +85,67 @@ export const getMyResources = async (req, res) => {
 export const updateResource = async (req, res) => {
     try {
         const { id } = req.params;
-        const updateData = { ...req.body };
+        const updates = req.body;
+        const userId = req.userId;
 
-        // Handle location update
-        if (updateData.latitude && updateData.longitude) {
-            updateData.location = {
-                type: "Point",
-                coordinates: [Number(updateData.longitude), Number(updateData.latitude)]
-            };
-            delete updateData.latitude;
-            delete updateData.longitude;
-        }
-
-        // 1. Find the resource purely by ID first (ignore owner check initially)
+        // 1. Fetch current resource state
         const resource = await Resource.findById(id);
+        if (!resource) return res.status(404).json({ message: "Resource not found" });
 
-        if (!resource) {
-            return res.status(404).json({ message: "Resource not found" });
+        // 2. Permission Check
+        if (resource.owner.toString() !== userId && resource.status !== 'Reserved') {
+            return res.status(403).json({ message: "Not authorized" });
         }
 
-        // 2. 🔥 PERMISSION CHECK:
-        // Allow the update ONLY if:
-        //   A) You are the actual owner
-        //   B) OR The resource is a "Reserved" request (meaning it's a dispatch order anyone can fulfill)
-        if (resource.owner.toString() !== req.userId && resource.status !== 'Reserved') {
-            return res.status(403).json({ message: "Unauthorized: You do not own this resource" });
-        }
+        // --- SMART MERGE LOGIC START ---
+        // If we are marking it "Available" (Returning from Deployment)
+        if (updates.status === "Available" && resource.status !== "Available") {
 
-        // 3. Perform the update
+            // Try to find an existing "Main Stack" of this item
+            const existingStack = await Resource.findOne({
+                owner: resource.owner,
+                item_name: resource.item_name,
+                category: resource.category, // Ensure we don't merge different categories
+                status: "Available",
+                _id: { $ne: resource._id } // Don't find itself
+            });
+
+            if (existingStack) {
+                // MERGE: Add quantity to the main stack
+                existingStack.quantity += resource.quantity;
+
+                // Update the timestamp to show recent activity
+                existingStack.updatedAt = new Date();
+
+                await existingStack.save();
+
+                // DELETE the temporary deployment card
+                await Resource.findByIdAndDelete(resource._id);
+
+                return res.status(200).json({
+                    message: "Resource returned and merged into inventory",
+                    resource: existingStack,
+                    merged: true
+                });
+            }
+
+            // If no stack exists, clean up this card to make it the new Main Stack
+            updates.current_incident = null; // Clear incident link
+            // Optional: Reset location to base if you have that stored, otherwise keep current
+        }
+        // --- SMART MERGE LOGIC END ---
+
+        // Standard Update (if no merge happened)
         const updatedResource = await Resource.findByIdAndUpdate(
             id,
-            updateData,
+            updates,
             { new: true }
         );
 
-        return res.status(200).json({ message: "Resource updated", resource: updatedResource });
+        res.status(200).json({ resource: updatedResource, merged: false });
+
     } catch (error) {
-        console.error("Update Resource Error:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: error.message });
     }
 };
 
