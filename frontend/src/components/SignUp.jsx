@@ -80,9 +80,22 @@ export default function SignUp() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex justify-center items-center px-4">
-      <div className="w-full max-w-md border border-gray-200 rounded-2xl p-8 shadow-sm">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 pt-24">
+      <div className="w-full max-w-md border border-gray-200 rounded-2xl p-6 shadow-lg bg-white">
+        <div className="flex flex-col items-center mb-1">
+          <div className="mb-2">
+            <img
+              src="/connection.png"
+              alt="Logo"
+              className="h-14 w-14 object-contain"
+            />
+          </div>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">CrisisConnect</h2>
+            <p className="text-xs text-gray-500 mb-6">Emergency Response & Management System</p>
+          </div>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
           <p className="text-gray-500 text-sm mt-1">Sign up to get started</p>
