@@ -9,9 +9,10 @@ import {
   getNearbyIncidents,
   deleteIncident,
   getIncidentStats,
+  getIncidentAnalytics,
   dispatchIncident,
 } from "../controller/incident.controller.js";
-import  isAuth  from "../middleware/auth.middleware.js";
+import isAuth from "../middleware/auth.middleware.js";
 
 const IncidentRouter = express.Router();
 
@@ -20,6 +21,7 @@ const upload = multer({ dest: "uploads/" });
 
 // Stats (must be before :incidentId)
 IncidentRouter.get("/stats/summary", getIncidentStats);
+IncidentRouter.get("/analytics", getIncidentAnalytics);
 
 // Create (protected) - supports multipart image upload field name "image"
 IncidentRouter.post("/create", isAuth, upload.single("image"), createIncident);

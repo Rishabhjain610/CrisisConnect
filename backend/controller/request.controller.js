@@ -107,7 +107,13 @@ export const updateRequestStatus = async (req, res) => {
         const { status } = req.body;
         const coordinatorId = req.userId;
 
-        const request = await Request.findById(requestId).populate("agencyId");
+        // ✅ 1. Fix Populate to get Citizen Details
+        const request = await Request.findById(requestId)
+            .populate("agencyId")
+            .populate({
+                path: "incidentId",
+                populate: { path: "reportedBy" } // This fetches the Citizen's Phone Number
+            });
         if (!request) return res.status(404).json({ message: "Request not found" });
 
         // --- FETCH INCIDENT FOR DESTINATION ---
@@ -142,6 +148,7 @@ export const updateRequestStatus = async (req, res) => {
             const deployedLog = [];
             const failedLog = [];
             const remainingItems = [];
+            const citizen = request.incidentId?.reportedBy;
 
             for (const item of requestedItems) {
                 const resource = await Resource.findOne({
@@ -213,6 +220,31 @@ export const updateRequestStatus = async (req, res) => {
                         to: agency.phone
                     });
                 } catch (smsErr) { console.error("Twilio Error:", smsErr.message); }
+            }
+
+            // Notify Citizen (Reporter)
+            if (client && deployedLog.length > 0) {
+                const reporter = await User.findById(incident.reportedBy).select("name phone");
+                if (reporter?.phone) {
+                    const citizenMsg = `✅ Help is on the way for your report #${request.incidentId.toString().slice(-4)}.\nResources en route: ${deployedLog.join(", ")}\nTrack live in the app.`;
+                    try {
+                        await client.messages.create({
+                            body: citizenMsg,
+                            from: process.env.TWILIO_PHONE_NUMBER,
+                            to: reporter.phone
+                        });
+                    } catch (smsErr) { console.error("Twilio Error:", smsErr.message); }
+                }
+            }
+
+            if (client && citizen?.phone) {
+                try {
+                    await client.messages.create({
+                        body: `🚑 HELP IS ON THE WAY! \nYour incident (#${incident._id.toString().slice(-4)}) has been accepted. Response units are en route to your location. You can track them in the app.`,
+                        from: process.env.TWILIO_PHONE_NUMBER,
+                        to: citizen.phone
+                    });
+                } catch (e) { console.error("Twilio Citizen Error", e); }
             }
 
             return res.status(200).json({

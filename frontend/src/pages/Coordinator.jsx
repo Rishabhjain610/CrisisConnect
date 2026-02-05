@@ -124,6 +124,30 @@ const Coordinator = () => {
     return dist < 0.1; // Arrived if < 100 meters
   };
 
+  // ✅ Helper to group active resources by Incident
+  const getGroupedDeployments = () => {
+    const groups = {};
+    activeDeployments.forEach(res => {
+      const incId = res.current_incident?._id || "unknown";
+      if (!groups[incId]) {
+        groups[incId] = { incident: res.current_incident, resources: [] };
+      }
+      groups[incId].resources.push(res);
+    });
+    return Object.values(groups);
+  };
+
+  // ✅ Helper to Recall All Units for one incident
+  const handleRecallAll = async (resources) => {
+    if (!window.confirm(`Recall all ${resources.length} units to base?`)) return;
+    try {
+      await Promise.all(resources.map(r =>
+        axios.put(`${serverUrl}/api/resource/${r._id}`, { status: "Available" }, { withCredentials: true })
+      ));
+      fetchStats();
+    } catch (e) { alert("Error recalling units"); }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 pt-24 pb-12 px-6 font-sans">
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -164,6 +188,7 @@ const Coordinator = () => {
         </div>
 
         {/* --- 4. Live Field Operations --- */}
+        {/* --- 4. Live Field Operations (GROUPED VIEW) --- */}
         <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
           <div className="p-6 border-b border-zinc-100 flex justify-between items-center">
             <h2 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
@@ -171,13 +196,13 @@ const Coordinator = () => {
               Live Field Operations
             </h2>
             <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md">
-              {activeDeployments.length} Active
+              {activeDeployments.length} Active Units
             </span>
           </div>
 
-          <div className="p-2">
+          <div className="p-4 space-y-6">
             {activeDeployments.length === 0 ? (
-              <div className="py-16 text-center">
+              <div className="py-12 text-center">
                 <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-100">
                   <Truck size={24} className="text-zinc-300" />
                 </div>
@@ -185,59 +210,65 @@ const Coordinator = () => {
                 <p className="text-zinc-500 text-sm mt-1">All resources are currently at base.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-2">
-                {activeDeployments.map((resource) => {
-                  const hasArrived = checkArrival(resource);
-                  return (
-                    <div key={resource._id} className="group bg-white border border-zinc-200 hover:border-indigo-300 p-5 rounded-2xl transition-all hover:shadow-md">
-                      <div className="flex justify-between items-start mb-4">
+              // ✅ ITERATE OVER GROUPS INSTEAD OF INDIVIDUAL ITEMS
+              getGroupedDeployments().map((group, idx) => (
+                <div key={idx} className="border border-zinc-200 rounded-2xl overflow-hidden">
+                  {/* INCIDENT HEADER & RECALL BUTTON */}
+                  <div className="bg-zinc-50 p-4 border-b border-zinc-200 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-zinc-900 flex items-center gap-2">
+                        {group.incident?.type || "Mission"}
+                        <span className="text-xs font-normal text-zinc-500 bg-white border border-zinc-200 px-2 py-0.5 rounded-full">
+                          #{group.incident?._id?.slice(-4).toUpperCase() || "---"}
+                        </span>
+                      </h3>
+                      {group.incident?.location && (
+                        <p className="text-xs text-zinc-400 mt-1 flex items-center gap-1">
+                          <MapPin size={12} /> {group.incident.location.coordinates[1].toFixed(4)}, {group.incident.location.coordinates[0].toFixed(4)}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRecallAll(group.resources)}
+                      className="text-xs font-bold bg-white border border-red-200 text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                    >
+                      <ArrowUpRight size={14} /> Recall All {group.resources.length} Units
+                    </button>
+                  </div>
+
+                  {/* RESOURCES GRID FOR THIS INCIDENT */}
+                  <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {group.resources.map((resource) => (
+                      <div key={resource._id} className="bg-white border border-zinc-100 p-3 rounded-xl flex justify-between items-center hover:border-indigo-200 transition-colors">
                         <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                            <Truck size={20} />
+                          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <Truck size={16} />
                           </div>
                           <div>
-                            <h3 className="font-bold text-zinc-900">{resource.item_name}</h3>
-                            <p className="text-xs text-zinc-500 font-medium uppercase">{resource.category}</p>
+                            <h4 className="font-bold text-sm text-zinc-900">{resource.item_name}</h4>
+                            <p className="text-xs text-zinc-500 flex items-center gap-1">
+                              {checkArrival(resource) ? (
+                                <span className="text-green-600 font-bold flex items-center gap-1"><CheckCircle2 size={10} /> On Scene</span>
+                              ) : (
+                                <span className="text-blue-600 font-bold flex items-center gap-1"><Clock size={10} /> En Route</span>
+                              )}
+                            </p>
                           </div>
                         </div>
-                        {hasArrived ? (
-                          <div className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-100">
-                            <CheckCircle2 size={12} /> ON SCENE
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg animate-pulse">
-                            <Clock size={12} /> EN ROUTE
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm p-2 bg-zinc-50 rounded-lg">
-                          <span className="text-zinc-500">Quantity</span>
-                          <span className="font-bold text-zinc-900">{resource.quantity} Units</span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openTracking(resource)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Track on Map"
+                          >
+                            <ExternalLink size={16} />
+                          </button>
                         </div>
-
-                        {resource.location && (
-                          <div className="flex items-center justify-between text-xs text-zinc-400 mt-2 px-1">
-                            <div className="flex items-center gap-1">
-                              <MapPin size={12} />
-                              <span className="font-mono">
-                                {resource.location.coordinates[1].toFixed(4)}, {resource.location.coordinates[0].toFixed(4)}
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => openTracking(resource)}
-                              className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 hover:underline"
-                            >
-                              Track Live <ExternalLink size={12} />
-                            </button>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>

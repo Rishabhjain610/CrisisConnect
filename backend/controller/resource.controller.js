@@ -81,6 +81,30 @@ export const getMyResources = async (req, res) => {
     }
 };
 
+// Get deployed resources for a specific incident (citizen tracking)
+export const getIncidentDeployedResources = async (req, res) => {
+    try {
+        const { incidentId } = req.params;
+
+        const incident = await Incident.findById(incidentId).select("reportedBy");
+        if (!incident) return res.status(404).json({ message: "Incident not found" });
+
+        if (incident.reportedBy?.toString() !== req.userId && req.userRole !== "agency") {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
+        const resources = await Resource.find({
+            current_incident: incidentId,
+            status: "Deployed"
+        }).sort({ createdAt: -1 });
+
+        return res.status(200).json({ resources });
+    } catch (error) {
+        console.error("Get Incident Resources Error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 // Update a resource
 export const updateResource = async (req, res) => {
     try {
@@ -168,4 +192,19 @@ export const getAvailableResourcesGrouped = async (req, res) => {
         ]);
         return res.status(200).json({ groupedResources: resources });
     } catch (error) { return res.status(500).json({ message: "Internal server error" }); }
+};
+
+
+// ✅ Get deployed resources for a specific incident (For Citizen Tracking)
+export const getResourcesByIncident = async (req, res) => {
+    try {
+        const { incidentId } = req.params;
+        const resources = await Resource.find({
+            current_incident: incidentId,
+            status: "Deployed"
+        });
+        res.status(200).json({ resources });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };

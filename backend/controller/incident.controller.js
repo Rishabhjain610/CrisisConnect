@@ -575,6 +575,11 @@ import {
 } from "../utils/ai-analysis.js";
 import { calculateTrustScore } from "../utils/scoring.js";
 import { determinePriorityCode } from "../utils/priority-coding.js";
+import twilio from "twilio";
+
+const client = process.env.TWILIO_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -734,8 +739,8 @@ export const createIncident = async (req, res) => {
 
     // ==================== VALIDATION ====================
     if (!req.userId) {
-      return res.status(401).json({ 
-        message: "Authentication required to report incidents" 
+      return res.status(401).json({
+        message: "Authentication required to report incidents"
       });
     }
 
@@ -746,8 +751,8 @@ export const createIncident = async (req, res) => {
     }
 
     if (typeof latitude === "undefined" || typeof longitude === "undefined") {
-      return res.status(400).json({ 
-        message: "latitude and longitude are required" 
+      return res.status(400).json({
+        message: "latitude and longitude are required"
       });
     }
 
@@ -778,7 +783,7 @@ export const createIncident = async (req, res) => {
     if (req.file) {
       imageBuffer = await fs.promises.readFile(req.file.path);
       cleanImageBase64 = imageBuffer.toString("base64");
-      await fs.promises.unlink(req.file.path).catch(() => {});
+      await fs.promises.unlink(req.file.path).catch(() => { });
       console.log("📸 Image from multipart upload");
     }
     // From JSON base64
@@ -992,7 +997,7 @@ export const createIncident = async (req, res) => {
     // ==================== AUTO-DETECT INCIDENT TYPE ====================
     // ✅ If type not provided or is "Other", auto-detect from AI analysis
     let detectedType = type || "Other";
-    
+
     if (!type || type === "Other") {
       detectedType = detectIncidentType(visionAnalysis, voiceAnalysis);
       console.log(`\n🔍 AUTO-DETECTED TYPE: ${detectedType}`);
@@ -1102,17 +1107,33 @@ export const updateIncidentStatus = async (req, res) => {
   try {
     const { incidentId } = req.params;
     const { status, respondedBy, dispatchedResources } = req.body;
-    const incident = await Incident.findById(incidentId);
-    if (!incident)
-      return res.status(404).json({ message: "Incident not found" });
 
-    if (status) incident.status = status;
-    if (respondedBy) incident.respondedBy = respondedBy;
-    if (dispatchedResources && Array.isArray(dispatchedResources))
-      incident.dispatchedResources = dispatchedResources;
+    // Find and Update
+    const incident = await Incident.findByIdAndUpdate(
+      incidentId,
+      {
+        ...(status && { status }),
+        ...(respondedBy && { respondedBy }),
+        ...(dispatchedResources && { dispatchedResources })
+      },
+      { new: true }
+    ).populate("reportedBy");
 
-    await incident.save();
-    await incident.populate("reportedBy", "name email phone role");
+    if (!incident) return res.status(404).json({ message: "Incident not found" });
+
+    // 🔔 NOTIFICATION LOGIC: If Resolved
+    if (status === "Resolved" && client && incident.reportedBy?.phone) {
+      try {
+        await client.messages.create({
+          body: `✅ INCIDENT RESOLVED: The emergency report #${incident._id.toString().slice(-4)} has been closed. All units are returning to base. Stay safe!`,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: incident.reportedBy.phone
+        });
+        console.log(`Resolution SMS sent to ${incident.reportedBy.phone}`);
+      } catch (e) {
+        console.error("Twilio Error:", e.message);
+      }
+    }
 
     return res.status(200).json({ message: "Incident updated", incident });
   } catch (err) {
@@ -1199,6 +1220,347 @@ export const getIncidentStats = async (req, res) => {
   }
 };
 
+export const getIncidentAnalytics = async (req, res) => {
+  try {
+    const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 365);
+    const timezone = req.query.timezone || "UTC";
+    const end = new Date();
+    const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
+
+    const match = { createdAt: { $gte: start, $lte: end } };
+
+    const [
+      total,
+      resolved,
+      active,
+      pending,
+      spam,
+      trendByDay,
+      byType,
+      bySeverity,
+      byStatus,
+      byPriority,
+      byMode,
+      trustBuckets,
+      responseBySeverity,
+      slaBySeverity,
+      hourlyPattern,
+      dayOfWeekPattern,
+      hotspots,
+      recent,
+      resourcesByStatus,
+      resourcesByCategory,
+      usersByRole,
+      avgResolutionAgg,
+      backlogAging,
+      autoDispatchAgg,
+    ] = await Promise.all([
+      Incident.countDocuments(match),
+      Incident.countDocuments({ ...match, status: "Resolved" }),
+      Incident.countDocuments({ ...match, status: "Active" }),
+      Incident.countDocuments({ ...match, status: "Pending" }),
+      Incident.countDocuments({ ...match, status: "Spam" }),
+      Incident.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$createdAt",
+                timezone,
+              },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        { $group: { _id: "$type", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        { $group: { _id: "$severity", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        { $group: { _id: "$priorityCode.code", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        { $group: { _id: "$mode", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        {
+          $bucket: {
+            groupBy: "$trustScore.totalScore",
+            boundaries: [0, 20, 40, 60, 80, 101],
+            default: "unknown",
+            output: { count: { $sum: 1 } },
+          },
+        },
+      ]),
+      Incident.aggregate([
+        { $match: { ...match, status: "Resolved" } },
+        {
+          $project: {
+            severity: 1,
+            resolutionHours: {
+              $divide: [{ $subtract: ["$updatedAt", "$createdAt"] }, 3600000],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$severity",
+            avgResolutionHours: { $avg: "$resolutionHours" },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { avgResolutionHours: -1 } },
+      ]),
+      Incident.aggregate([
+        { $match: { ...match, status: "Resolved" } },
+        {
+          $project: {
+            severity: 1,
+            resolutionHours: {
+              $divide: [{ $subtract: ["$updatedAt", "$createdAt"] }, 3600000],
+            },
+            slaTargetHours: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ["$severity", "Critical"] }, then: 1 },
+                  { case: { $eq: ["$severity", "High"] }, then: 2 },
+                  { case: { $eq: ["$severity", "Medium"] }, then: 4 },
+                  { case: { $eq: ["$severity", "Low"] }, then: 8 },
+                ],
+                default: 4,
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            severity: 1,
+            slaMet: { $lte: ["$resolutionHours", "$slaTargetHours"] },
+          },
+        },
+        {
+          $group: {
+            _id: "$severity",
+            total: { $sum: 1 },
+            met: { $sum: { $cond: ["$slaMet", 1, 0] } },
+          },
+        },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: { $hour: { date: "$createdAt", timezone } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: { $dayOfWeek: { date: "$createdAt", timezone } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        {
+          $project: {
+            lat: { $round: [{ $arrayElemAt: ["$location.coordinates", 1] }, 2] },
+            lon: { $round: [{ $arrayElemAt: ["$location.coordinates", 0] }, 2] },
+            severityScore: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ["$severity", "Low"] }, then: 1 },
+                  { case: { $eq: ["$severity", "Medium"] }, then: 2 },
+                  { case: { $eq: ["$severity", "High"] }, then: 3 },
+                  { case: { $eq: ["$severity", "Critical"] }, then: 4 },
+                ],
+                default: 2,
+              },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { lat: "$lat", lon: "$lon" },
+            count: { $sum: 1 },
+            avgSeverityScore: { $avg: "$severityScore" },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+      ]),
+      Incident.find(match)
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .select("type severity status priorityCode.code createdAt location")
+        .lean(),
+      Resource.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Resource.aggregate([
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      User.aggregate([
+        { $group: { _id: "$role", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Incident.aggregate([
+        { $match: { ...match, status: "Resolved" } },
+        {
+          $project: {
+            resolutionHours: {
+              $divide: [{ $subtract: ["$updatedAt", "$createdAt"] }, 3600000],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            avgResolutionHours: { $avg: "$resolutionHours" },
+            minResolutionHours: { $min: "$resolutionHours" },
+            maxResolutionHours: { $max: "$resolutionHours" },
+          },
+        },
+      ]),
+      Incident.aggregate([
+        { $match: { status: { $in: ["Pending", "Active"] } } },
+        {
+          $project: {
+            ageHours: {
+              $divide: [{ $subtract: [end, "$createdAt"] }, 3600000],
+            },
+          },
+        },
+        {
+          $bucket: {
+            groupBy: "$ageHours",
+            boundaries: [0, 1, 6, 24, 72, 168, 100000],
+            default: "unknown",
+            output: { count: { $sum: 1 } },
+          },
+        },
+      ]),
+      Incident.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: "$priorityCode.autoDispatch",
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const avgResolution = avgResolutionAgg?.[0] || {
+      avgResolutionHours: null,
+      minResolutionHours: null,
+      maxResolutionHours: null,
+    };
+
+    const autoDispatchCount = autoDispatchAgg.reduce(
+      (sum, item) => (item._id ? sum + item.count : sum),
+      0
+    );
+
+    const response = {
+      range: {
+        days,
+        start,
+        end,
+        timezone,
+      },
+      summary: {
+        total,
+        resolved,
+        active,
+        pending,
+        spam,
+        resolutionRate: total ? Number(((resolved / total) * 100).toFixed(1)) : 0,
+        avgResolutionHours: avgResolution.avgResolutionHours,
+        minResolutionHours: avgResolution.minResolutionHours,
+        maxResolutionHours: avgResolution.maxResolutionHours,
+        autoDispatchRate: total
+          ? Number(((autoDispatchCount / total) * 100).toFixed(1))
+          : 0,
+      },
+      trends: trendByDay.map((d) => ({ date: d._id, count: d.count })),
+      byType: byType.map((d) => ({ type: d._id || "Unknown", count: d.count })),
+      bySeverity: bySeverity.map((d) => ({ severity: d._id || "Unknown", count: d.count })),
+      byStatus: byStatus.map((d) => ({ status: d._id || "Unknown", count: d.count })),
+      byPriority: byPriority.map((d) => ({ code: d._id || "Unknown", count: d.count })),
+      byMode: byMode.map((d) => ({ mode: d._id || "Unknown", count: d.count })),
+      trustScoreBuckets: trustBuckets.map((b) => ({
+        range:
+          b._id === "unknown"
+            ? "unknown"
+            : `${b._id}-${Number(b._id) + 20}`,
+        count: b.count,
+      })),
+      responseBySeverity: responseBySeverity.map((d) => ({
+        severity: d._id || "Unknown",
+        avgResolutionHours: d.avgResolutionHours,
+        count: d.count,
+      })),
+      slaBySeverity: slaBySeverity.map((d) => ({
+        severity: d._id || "Unknown",
+        met: d.met,
+        total: d.total,
+        rate: d.total ? Number(((d.met / d.total) * 100).toFixed(1)) : 0,
+      })),
+      hourlyPattern: hourlyPattern.map((d) => ({ hour: d._id, count: d.count })),
+      dayOfWeekPattern: dayOfWeekPattern.map((d) => ({ day: d._id, count: d.count })),
+      hotspots: hotspots.map((h) => ({
+        lat: h._id.lat,
+        lon: h._id.lon,
+        count: h.count,
+        avgSeverityScore: Number(h.avgSeverityScore?.toFixed(2) || 0),
+      })),
+      backlogAging: backlogAging.map((b) => ({ bucket: b._id, count: b.count })),
+      resources: {
+        byStatus: resourcesByStatus.map((r) => ({ status: r._id, count: r.count })),
+        byCategory: resourcesByCategory.map((r) => ({ category: r._id, count: r.count })),
+      },
+      users: {
+        byRole: usersByRole.map((u) => ({ role: u._id, count: u.count })),
+      },
+      recent,
+    };
+
+    return res.status(200).json(response);
+  } catch (err) {
+    console.error("getIncidentAnalytics error:", err.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const dispatchIncident = async (req, res) => {
   try {
     const { incidentId } = req.params;
@@ -1251,5 +1613,6 @@ export default {
   getNearbyIncidents,
   deleteIncident,
   getIncidentStats,
+  getIncidentAnalytics,
   dispatchIncident,
 };

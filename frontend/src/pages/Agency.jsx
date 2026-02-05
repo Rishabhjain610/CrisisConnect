@@ -1,6 +1,8 @@
 
 import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AuthDataContext } from "../context/AuthDataContext";
 import {
   MapContainer,
@@ -26,7 +28,6 @@ import greenflag from "../assets/greenflag.png";
 import redflag from "../assets/redflag.png";
 import yellowflag from "../assets/yellowflag.png";
 
-// ✅ FIX LEAFLET ICONS
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -65,20 +66,27 @@ const getStatusIcon = (status) => {
   });
 };
 
-// ✅ RESOURCE ICON (COLORED BY CATEGORY)
+// ✅ RESOURCE ICON (Updated for Master Catalog Categories)
+// ✅ RESOURCE ICON (Updated for Master Catalog Categories)
 const getResourceIcon = (category) => {
   const categoryMap = {
-    medical: { emoji: "🏥", color: "#ef4444" },
+    // Standard Master Catalog Categories
+    medical: { emoji: "🏥", color: "#ef4444" },  // Ambulance, Medical Kit
+    fire: { emoji: "🚒", color: "#ea580c" },     // Fire Truck
+    rescue: { emoji: "🆘", color: "#f97316" },   // Rescue Team, Boat, Ropes
+    relief: { emoji: "📦", color: "#10b981" },    // Food Packets, Water Tanker
+    equipment: { emoji: "⚡", color: "#8b5cf6" }, // Generator
+    police: { emoji: "🚓", color: "#2563eb" },    // Police Patrol
+
+    // Legacy / Fallback Categories (Keep these just in case)
     food: { emoji: "🍖", color: "#f59e0b" },
-    equipment: { emoji: "🔧", color: "#8b5cf6" },
-    shelter: { emoji: "🏠", color: "#10b981" },
-    rescue: { emoji: "🚑", color: "#dc2626" },
     water: { emoji: "💧", color: "#06b6d4" },
+    shelter: { emoji: "🏠", color: "#10b981" },
     fuel: { emoji: "⛽", color: "#f97316" },
   };
 
   const categoryLower = category?.toLowerCase();
-  const { emoji = "📦", color = "#3b82f6" } = categoryMap[categoryLower] || {};
+  const { emoji = "📍", color = "#64748b" } = categoryMap[categoryLower] || {};
 
   return L.divIcon({
     html: `<div style="background: linear-gradient(135deg, ${color} 0%, ${adjustBrightness(
@@ -374,6 +382,7 @@ const Agency = () => {
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [dispatchResources, setDispatchResources] = useState([]);
+  const [resources, setResources] = useState([]);
 
   const [sentRequests, setSentRequests] = useState([]);
 
@@ -382,6 +391,77 @@ const Agency = () => {
     Medium: 3,
     High: 5,
     Critical: 8,
+  };
+
+  // ✅ COMPREHENSIVE RESOURCE RECOMMENDATIONS BASED ON INCIDENT TYPE & SEVERITY
+  // ✅ SMART RECOMMENDATIONS (Updated to Match DB Master Catalog)
+  const getResourceRecommendations = (incidentType, severity) => {
+    const type = incidentType?.toLowerCase() || "other";
+    const sevIndex = { "low": 0, "medium": 1, "high": 2, "critical": 3 }[severity?.toLowerCase()] || 1;
+
+    const recommendations = {
+      "fire": {
+        name: "Fire Emergency",
+        emoji: "🔥",
+        resources: [
+          { item_name: "Fire Truck", category: "Fire", description: "Heavy fire suppression unit", base: 1, levels: [1, 2, 3, 4] },
+          { item_name: "Rescue Team", category: "Rescue", description: "Trained rescue personnel", base: 5, levels: [5, 10, 15, 20] },
+          { item_name: "Ambulance", category: "Medical", description: "Medical emergency response", base: 1, levels: [1, 2, 3, 4] },
+          { item_name: "Water Tanker", category: "Relief", description: "Additional water supply", base: 0, levels: [0, 1, 2, 3] },
+          { item_name: "Medical Kit", category: "Medical", description: "Advanced life support supplies", base: 2, levels: [2, 4, 6, 8] },
+        ]
+      },
+      "medical": {
+        name: "Medical Emergency",
+        emoji: "🚑",
+        resources: [
+          { item_name: "Ambulance", category: "Medical", description: "Patient transport vehicles", base: 1, levels: [1, 2, 3, 4] },
+          { item_name: "ICU Ambulance", category: "Medical", description: "Critical care transport", base: 1, levels: [0, 1, 2, 3] },
+          { item_name: "Medical Kit", category: "Medical", description: "Emergency medical supplies", base: 3, levels: [3, 6, 9, 12] },
+          { item_name: "Rescue Team", category: "Rescue", description: "For patient lifting/moving", base: 1, levels: [1, 2, 2, 4] },
+        ]
+      },
+      "police": {
+        name: "Police/Security Incident",
+        emoji: "🚨",
+        resources: [
+          { item_name: "Police Patrol", category: "Police", description: "Law enforcement unit", base: 2, levels: [2, 4, 6, 10] },
+          { item_name: "Rescue Team", category: "Rescue", description: "Crowd control / support", base: 1, levels: [1, 2, 4, 6] },
+          { item_name: "Ambulance", category: "Medical", description: "Standby medical support", base: 1, levels: [1, 1, 2, 2] },
+          { item_name: "Generator", category: "Equipment", description: "Power for mobile command", base: 0, levels: [0, 1, 1, 2] },
+        ]
+      },
+      "accident": {
+        name: "Traffic/Vehicle Accident",
+        emoji: "🚧",
+        resources: [
+          { item_name: "Ambulance", category: "Medical", description: "Emergency transport", base: 1, levels: [1, 2, 3, 4] },
+          { item_name: "Rescue Team", category: "Rescue", description: "Extraction and support", base: 1, levels: [1, 2, 4, 6] },
+          { item_name: "Police Patrol", category: "Police", description: "Traffic control", base: 1, levels: [1, 2, 3, 4] },
+          { item_name: "Medical Kit", category: "Medical", description: "On-site treatment", base: 1, levels: [1, 2, 3, 4] },
+        ]
+      },
+      "natural disaster": {
+        name: "Natural Disaster",
+        emoji: "🌪️",
+        resources: [
+          { item_name: "Rescue Team", category: "Rescue", description: "Search and rescue personnel", base: 5, levels: [5, 10, 15, 20] },
+          { item_name: "Rescue Boat", category: "Rescue", description: "Water rescue vehicle", base: 0, levels: [0, 2, 4, 8] },
+          { item_name: "Life Jackets & Ropes", category: "Rescue", description: "Safety gear", base: 10, levels: [10, 20, 50, 100] },
+          { item_name: "Food Packets", category: "Relief", description: "Emergency rations", base: 50, levels: [50, 100, 300, 500] },
+          { item_name: "Water Tanker", category: "Relief", description: "Potable water supply", base: 1, levels: [1, 2, 3, 5] },
+          { item_name: "Generator", category: "Equipment", description: "Emergency power", base: 1, levels: [1, 2, 3, 5] },
+        ]
+      }
+    };
+
+    const incident = recommendations[type] || recommendations["accident"];
+    const resources = incident.resources.map(res => ({
+      ...res,
+      quantity: res.levels[Math.min(sevIndex, res.levels.length - 1)]
+    }));
+
+    return { name: incident.name, emoji: incident.emoji, resources };
   };
 
   const fetchCoordinators = async () => {
@@ -400,7 +480,7 @@ const Agency = () => {
       setStep(2);
     } catch (err) {
       console.error("Fetch coordinators error:", err);
-      alert("Failed to find coordinators");
+      toast.error("Failed to find coordinators");
     }
   };
 
@@ -440,6 +520,17 @@ const Agency = () => {
     }
   };
 
+  const fetchResources = async () => {
+    try {
+      const res = await axios.get(`${serverUrl}/api/resource/available-grouped`, { withCredentials: true });
+      // Flatten the grouped resources into a single array
+      const allResources = res.data.groupedResources?.flatMap(group => group.resources) || [];
+      setResources(allResources);
+    } catch (err) {
+      console.error("Fetch resources error:", err);
+    }
+  };
+
   const fetchSentRequests = async () => {
     try {
       const res = await axios.get(`${serverUrl}/api/request/agency/list`, { withCredentials: true });
@@ -451,6 +542,7 @@ const Agency = () => {
 
   useEffect(() => {
     fetchIncidents();
+    fetchResources();
 
     fetchSentRequests();
     const interval = setInterval(fetchSentRequests, 5000); // Poll for updates
@@ -484,7 +576,7 @@ const Agency = () => {
   };
 
   const handleDispatch = async () => {
-    if (!selectedCoordinator) return alert("Please select a coordinator");
+    if (!selectedCoordinator) return toast.error("Please select a coordinator");
 
     try {
       await axios.post(
@@ -503,7 +595,7 @@ const Agency = () => {
         { withCredentials: true }
       );
 
-      alert(
+      toast.success(
         `✅ Request sent to ${selectedCoordinator.name}! They have been notified via SMS.`
       );
       setShowDispatchModal(false);
@@ -512,7 +604,7 @@ const Agency = () => {
       fetchIncidents();
     } catch (err) {
       console.error(err);
-      alert("Failed to send request");
+      toast.error("Failed to send request");
     }
   };
 
@@ -574,8 +666,23 @@ const Agency = () => {
     }
   };
 
+  // ✅ Function to Resolve Incident
+  const resolveIncident = async (id) => {
+    if (!window.confirm("Mark this incident as RESOLVED? This will close the case and notify the citizen.")) return;
+    try {
+      await axios.patch(`${serverUrl}/api/incident/${id}/status`, { status: "Resolved" }, { withCredentials: true });
+      fetchIncidents();
+      setSelectedIncident(null);
+      toast.success("Incident Resolved & Closed!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to resolve incident");
+    }
+  };
+
   return (
     <div className="min-h-screen pt-16 bg-gradient-to-br from-gray-50 to-gray-100">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="min-h-screen flex flex-col">
         {/* Header */}
         <header className="flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
@@ -652,7 +759,7 @@ const Agency = () => {
         {/* Main Content Area */}
         <div className="flex-1 flex p-6 gap-6">
           {/* LEFT PANEL - Incident Queue */}
-          <div className="w-[40%] h-[1320px] flex flex-col">
+          <div className={`w-[40%] h-[1320px] flex flex-col ${showDispatchModal ? 'pointer-events-none opacity-50' : ''}`}>
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-full">
               <div className="p-6 border-b border-gray-100 flex-shrink-0">
                 <div className="flex items-center justify-between">
@@ -786,9 +893,9 @@ const Agency = () => {
           </div>
 
           {/* RIGHT PANEL - Map and Details */}
-          <div className="w-[60%] h-[90%] flex flex-col gap-6">
+          <div className="w-[60%] h-[95%] flex flex-col gap-6">
             {/* Tactical Operations Map */}
-            <div className="flex-none h-[350px] bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="flex-none h-[440px] pt-4 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
@@ -819,13 +926,13 @@ const Agency = () => {
                   </div>
                 </div>
               </div>
-              <div className="h-[calc(100%-60px)]">
-                <TacticalMap incidents={allIncidents} />
+              <div className={`h-[calc(100%-60px)] ${showDispatchModal ? 'pointer-events-none opacity-50' : ''}`}>
+                <TacticalMap incidents={allIncidents} resources={resources} />
               </div>
             </div>
 
             {/* Incident Details Section */}
-            <div className="flex-1 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className={`flex-1 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden ${showDispatchModal ? 'pointer-events-none opacity-50' : ''}`}>
               <div className="p-6 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1008,14 +1115,21 @@ const Agency = () => {
                         </>
                       )}
 
+                      {selectedIncident.status === 'Active' && (
+                        <button
+                          onClick={() => resolveIncident(selectedIncident._id)}
+                          className="px-4 py-3 border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 text-sm font-bold rounded-xl transition-all flex items-center gap-2"
+                        >
+                          Mark Resolved
+                        </button>
+                      )}
+
                       {/* LOGIC: "Activate & Deploy" is always visible (even for Active incidents) */}
                       <button
                         onClick={() => {
-                          const qty = severityPreset[selectedIncident.severity] || 2;
-                          setDispatchResources([
-                            { item_name: "Medical Kit", category: "Medical", quantity: qty },
-                            { item_name: "Rescue Team", category: "Rescue", quantity: qty },
-                          ]);
+                          const recommendations = getResourceRecommendations(selectedIncident.type, selectedIncident.severity);
+                          setDispatchResources(recommendations.resources);
+                          setStep(1);
                           setShowDispatchModal(true);
                         }}
                         className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg"
@@ -1087,118 +1201,249 @@ const Agency = () => {
 
         {/* DISPATCH MODAL */}
         {showDispatchModal && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white w-[500px] rounded-xl p-6 shadow-xl transition-all">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                {step === 1
-                  ? "🚑 Step 1: Define Resources"
-                  : "📡 Step 2: Select Coordinator"}
-              </h2>
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4">
+            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl transition-all max-h-[90vh] overflow-y-auto z-[10000]">
+              <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 border-b border-blue-400">
+                <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                  {step === 1
+                    ? "🚨 Resource Allocation"
+                    : "📡 Select Response Coordinator"}
+                </h2>
+                <p className="text-blue-100 text-sm">
+                  {step === 1
+                    ? `Deploying resources for ${selectedIncident?.type} (${selectedIncident?.severity} severity)`
+                    : `Finding available coordinators near incident location`}
+                </p>
+              </div>
 
-              {/* STEP 1: SELECT RESOURCES */}
-              {step === 1 && (
-                <>
-                  <div className="space-y-4 mb-6">
-                    {dispatchResources.map((res, index) => (
-                      <div key={index} className="grid grid-cols-3 gap-3 items-center">
-                        <input
-                          type="text"
-                          value={res.item_name}
-                          readOnly
-                          className="border rounded-lg px-3 py-2 bg-gray-100 text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={res.category}
-                          readOnly
-                          className="border rounded-lg px-3 py-2 bg-gray-100 text-sm"
-                        />
-                        <input
-                          type="number"
-                          value={res.quantity}
-                          onChange={(e) => {
-                            const updated = [...dispatchResources];
-                            updated[index].quantity = Number(e.target.value);
-                            setDispatchResources(updated);
-                          }}
-                          className="border rounded-lg px-3 py-2 text-sm"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setShowDispatchModal(false)}
-                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={fetchCoordinators}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Find Coordinators →
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* STEP 2: SELECT COORDINATOR */}
-              {step === 2 && (
-                <>
-                  <p className="text-sm text-gray-500 mb-3">
-                    Found {coordinators.length} coordinators near the incident location.
-                  </p>
-                  <div className="max-h-60 overflow-y-auto space-y-3 mb-6">
-                    {coordinators.length === 0 ? (
-                      <p className="text-center text-gray-500 py-4">
-                        No coordinators found nearby.
-                      </p>
-                    ) : (
-                      coordinators.map((coord) => (
-                        <div
-                          key={coord._id}
-                          onClick={() => setSelectedCoordinator(coord)}
-                          className={`p-3 border rounded-xl cursor-pointer flex justify-between items-center transition-colors ${selectedCoordinator?._id === coord._id
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                            }`}
-                        >
-                          <div>
-                            <p className="font-bold text-gray-900">
-                              {coord.name || "Coordinator"}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {coord.distanceKm ? coord.distanceKm.toFixed(1) : 'N/A'} km away • {coord.resourceCount || 0} assets
-                            </p>
+              <div className="p-6">
+                {/* STEP 1: RESOURCE ALLOCATION */}
+                {step === 1 && selectedIncident && (
+                  <>
+                    {/* RECOMMENDATION SUMMARY */}
+                    <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">{getResourceRecommendations(selectedIncident.type, selectedIncident.severity).emoji}</span>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 mb-1">
+                            {getResourceRecommendations(selectedIncident.type, selectedIncident.severity).name}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Recommended resources based on incident type and severity level
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                              {selectedIncident.type}
+                            </span>
+                            <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                              {selectedIncident.severity} Severity
+                            </span>
+                            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                              {dispatchResources.length} Resource Types
+                            </span>
                           </div>
-                          {selectedCoordinator?._id === coord._id && (
-                            <span className="text-blue-600 font-bold">✓</span>
-                          )}
                         </div>
-                      ))
+                      </div>
+                    </div>
+
+                    {/* RESOURCE LIST */}
+                    <div className="space-y-3 mb-6">
+                      <h3 className="font-bold text-gray-900 text-lg">Required Resources</h3>
+                      <div className="grid gap-3 max-h-96 overflow-y-auto">
+                        {dispatchResources.map((res, index) => (
+                          <div key={index} className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-blue-300 transition-colors">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-bold text-gray-900 text-base">{res.item_name}</span>
+                                  <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                                    {res.category}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-3">{res.description}</p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setDispatchResources(dispatchResources.filter((_, i) => i !== index));
+                                }}
+                                className="ml-2 p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-gray-700 min-w-fit">Quantity:</label>
+                              <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                                <button
+                                  onClick={() => {
+                                    const updated = [...dispatchResources];
+                                    if (updated[index].quantity > 1) {
+                                      updated[index].quantity -= 1;
+                                      setDispatchResources(updated);
+                                    }
+                                  }}
+                                  className="px-3 py-2 hover:bg-gray-200 text-gray-700 transition-colors"
+                                >
+                                  −
+                                </button>
+                                <input
+                                  type="number"
+                                  value={res.quantity}
+                                  onChange={(e) => {
+                                    const updated = [...dispatchResources];
+                                    const val = Math.max(1, Number(e.target.value) || 1);
+                                    updated[index].quantity = val;
+                                    setDispatchResources(updated);
+                                  }}
+                                  className="w-16 text-center border-none bg-white font-bold text-gray-900 focus:outline-none"
+                                  min="1"
+                                />
+                                <button
+                                  onClick={() => {
+                                    const updated = [...dispatchResources];
+                                    updated[index].quantity += 1;
+                                    setDispatchResources(updated);
+                                  }}
+                                  className="px-3 py-2 hover:bg-gray-200 text-gray-700 transition-colors"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <span className="text-xs text-gray-500 ml-auto">
+                                ≈ {['medical', 'rescue', 'food', 'water'].includes(res.category) ? res.quantity + ' units' : res.quantity + 'x available'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* SUMMARY */}
+                    <div className="bg-gray-50 rounded-xl p-4 mb-6 text-sm">
+                      <div className="font-medium text-gray-700 mb-2">Dispatch Summary</div>
+                      <ul className="space-y-1 text-gray-600">
+                        {dispatchResources.filter(r => r.quantity > 0).map((res, idx) => (
+                          <li key={idx} className="flex justify-between">
+                            <span>{res.item_name}</span>
+                            <span className="font-medium">{res.quantity} units</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* ACTION BUTTONS */}
+                    <div className="flex justify-between gap-3">
+                      <button
+                        onClick={() => setShowDispatchModal(false)}
+                        className="px-4 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-bold rounded-xl transition-all"
+                      >
+                        ✕ Cancel
+                      </button>
+                      <button
+                        onClick={fetchCoordinators}
+                        disabled={dispatchResources.filter(r => r.quantity > 0).length === 0}
+                        className={`px-6 py-3 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 ${dispatchResources.filter(r => r.quantity > 0).length === 0
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                          }`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Find Coordinators →
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* STEP 2: SELECT COORDINATOR */}
+                {step === 2 && (
+                  <>
+                    {coordinators.length === 0 ? (
+                      <div className="py-12 text-center">
+                        <div className="text-5xl mb-4">🔍</div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">No coordinators found</h3>
+                        <p className="text-gray-600 mb-6">
+                          No emergency coordinators available within the search radius.
+                        </p>
+                        <button
+                          onClick={() => setStep(1)}
+                          className="px-4 py-2 text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          ← Adjust resources and try again
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-600 mb-4 p-3 bg-blue-50 rounded-lg">
+                          Found <span className="font-bold text-blue-700">{coordinators.length}</span> available coordinators near the incident. Select one to dispatch resources.
+                        </p>
+
+                        <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+                          {coordinators.map((coord) => (
+                            <div
+                              key={coord._id}
+                              onClick={() => setSelectedCoordinator(coord)}
+                              className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedCoordinator?._id === coord._id
+                                ? "border-blue-500 bg-blue-50 shadow-md"
+                                : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                                }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="font-bold text-gray-900 text-lg">
+                                      {coord.name || "Coordinator"}
+                                    </span>
+                                    {selectedCoordinator?._id === coord._id && (
+                                      <span className="text-green-600 font-bold">✓ Selected</span>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                      <span>📍</span>
+                                      <span>{coord.distanceKm ? coord.distanceKm.toFixed(1) : 'N/A'} km away</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                      <span>📦</span>
+                                      <span>{coord.resourceCount || 0} available assets</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex justify-between gap-3">
+                          <button
+                            onClick={() => setStep(1)}
+                            className="px-4 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-bold rounded-xl transition-all flex items-center gap-2"
+                          >
+                            ← Back
+                          </button>
+                          <button
+                            onClick={handleDispatch}
+                            disabled={!selectedCoordinator}
+                            className={`px-6 py-3 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 ${!selectedCoordinator
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                              }`}
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Dispatch Resources
+                          </button>
+                        </div>
+                      </>
                     )}
-                  </div>
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setStep(1)}
-                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                    >
-                      ← Back
-                    </button>
-                    <button
-                      onClick={handleDispatch}
-                      disabled={!selectedCoordinator}
-                      className={`px-4 py-2 rounded-lg text-white transition-opacity ${!selectedCoordinator
-                        ? "bg-gray-300 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700"
-                        }`}
-                    >
-                      Send Request
-                    </button>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}

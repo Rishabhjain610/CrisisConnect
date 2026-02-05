@@ -3,22 +3,66 @@ import { useSelector } from 'react-redux'
 import axios from 'axios'
 import {
   Mic, Image as ImageIcon, FileText, MapPin, Clock,
-  AlertCircle, CheckCircle2, ArrowRight, Loader2, Calendar
+  AlertCircle, CheckCircle2, ArrowRight, Loader2, Calendar, ExternalLink, Truck, X
 } from 'lucide-react'
 import { AuthDataContext } from '../context/AuthDataContext'
 import { Link } from 'react-router-dom'
+
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+
+import icon from 'leaflet/dist/images/marker-icon.png'
+import iconShadow from 'leaflet/dist/images/marker-shadow.png'
+
+const defaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+})
+L.Marker.prototype.options.icon = defaultIcon
+
+const truckIcon = new L.DivIcon({
+  html: '<div style="background-color:#2563eb; color:white; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3);">🚑</div>',
+  className: 'custom-truck-icon',
+  iconSize: [28, 28],
+  iconAnchor: [14, 14]
+})
+
+const incidentIcon = new L.DivIcon({
+  html: '<div style="background-color:#dc2626; color:white; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3);">🚨</div>',
+  className: 'incident-icon',
+  iconSize: [28, 28],
+  iconAnchor: [14, 14]
+})
 
 const CitizenOwn = () => {
   const { userData } = useSelector(state => state.user)
   const { serverUrl } = useContext(AuthDataContext)
   const [incidents, setIncidents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showTracking, setShowTracking] = useState(false)
+  const [trackingIncident, setTrackingIncident] = useState(null)
+  const [deployedResources, setDeployedResources] = useState([])
+  const [trackingLoading, setTrackingLoading] = useState(false)
 
   useEffect(() => {
     if (userData?._id) {
       fetchUserIncidents()
     }
   }, [userData?._id])
+
+  useEffect(() => {
+    if (!showTracking || !trackingIncident?._id) return
+
+    fetchDeployedResources(trackingIncident._id)
+    const interval = setInterval(() => {
+      fetchDeployedResources(trackingIncident._id)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [showTracking, trackingIncident?._id, serverUrl])
 
   const fetchUserIncidents = async () => {
     try {
@@ -52,6 +96,26 @@ const CitizenOwn = () => {
     }
   }
 
+  const fetchDeployedResources = async (incidentId) => {
+    try {
+      setTrackingLoading(true)
+      const res = await axios.get(`${serverUrl}/api/resource/incident/${incidentId}/deployed`, {
+        withCredentials: true
+      })
+      setDeployedResources(res.data.resources || [])
+    } catch (err) {
+      console.error('Error fetching deployed resources:', err)
+      setDeployedResources([])
+    } finally {
+      setTrackingLoading(false)
+    }
+  }
+
+  const openTracking = (incident) => {
+    setTrackingIncident(incident)
+    setShowTracking(true)
+  }
+
   // Helper for Severity Color
   const getSeverityStyle = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -70,6 +134,26 @@ const CitizenOwn = () => {
       default: return 'bg-zinc-100 text-zinc-600';
     }
   }
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 9999
+    const R = 6371
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  const incidentCoords = trackingIncident?.location?.coordinates
+  const incidentLatLng = incidentCoords?.length === 2
+    ? [incidentCoords[1], incidentCoords[0]]
+    : null
+  const mapCenter = deployedResources?.[0]?.location?.coordinates?.length === 2
+    ? [deployedResources[0].location.coordinates[1], deployedResources[0].location.coordinates[0]]
+    : incidentLatLng || [19.0760, 72.8777]
 
   return (
     <div className="min-h-screen bg-zinc-50 pt-24 pb-12 px-6 font-sans">
@@ -135,9 +219,19 @@ const CitizenOwn = () => {
                       </div>
                     </div>
 
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 ${getStatusStyle(incident.status)}`}>
-                      {incident.status === 'Resolved' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                      {incident.status}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 ${getStatusStyle(incident.status)}`}>
+                        {incident.status === 'Resolved' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                        {incident.status}
+                      </div>
+                      {incident.status === 'Active' && (
+                        <button
+                          onClick={() => openTracking(incident)}
+                          className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 hover:bg-blue-100 transition-colors flex items-center gap-1"
+                        >
+                          Track Help <ExternalLink size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -201,6 +295,113 @@ const CitizenOwn = () => {
             <Link to="/sos" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-200">
               Create New Report <ArrowRight size={18} />
             </Link>
+          </div>
+        )}
+
+        {showTracking && trackingIncident && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden">
+              <div className="p-4 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
+                <div>
+                  <h3 className="font-bold text-lg text-zinc-900 flex items-center gap-2">
+                    <Truck size={18} className="text-blue-600" />
+                    Track Help: Incident #{trackingIncident._id.slice(-4).toUpperCase()}
+                  </h3>
+                  <p className="text-xs text-zinc-500">Live location of deployed units</p>
+                </div>
+                <button onClick={() => setShowTracking(false)} className="p-2 bg-white rounded-full hover:bg-zinc-100 transition-colors">
+                  <X size={18} className="text-zinc-500" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
+                <div className="lg:col-span-2 h-[380px] w-full rounded-2xl overflow-hidden border border-zinc-200">
+                  <MapContainer
+                    center={mapCenter}
+                    zoom={14}
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+                    {incidentLatLng && (
+                      <Marker position={incidentLatLng} icon={incidentIcon}>
+                        <Popup>Incident Location</Popup>
+                      </Marker>
+                    )}
+
+                    {deployedResources.map((res) => {
+                      if (!res.location?.coordinates?.length) return null
+                      const resLat = res.location.coordinates[1]
+                      const resLng = res.location.coordinates[0]
+                      const arrived = incidentLatLng
+                        ? calculateDistance(resLat, resLng, incidentLatLng[0], incidentLatLng[1]) < 0.1
+                        : false
+
+                      return (
+                        <Marker
+                          key={res._id}
+                          position={[resLat, resLng]}
+                          icon={truckIcon}
+                        >
+                          <Popup>
+                            <div className="text-center">
+                              <strong>{res.item_name}</strong><br />
+                              Qty: {res.quantity}<br />
+                              <span className={arrived ? 'text-green-600 font-bold' : 'text-blue-600 font-bold'}>
+                                {arrived ? 'ON SCENE' : 'En Route'}
+                              </span>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      )
+                    })}
+                  </MapContainer>
+                </div>
+
+                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 h-[380px] overflow-y-auto">
+                  <h4 className="text-sm font-bold text-zinc-900 mb-3">Deployed Units</h4>
+
+                  {trackingLoading && deployedResources.length === 0 ? (
+                    <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                      <Loader2 size={16} className="animate-spin" /> Loading live units...
+                    </div>
+                  ) : deployedResources.length === 0 ? (
+                    <div className="text-zinc-500 text-sm">
+                      No units have been deployed yet. You will see updates here soon.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {deployedResources.map((res) => {
+                        const resLat = res.location?.coordinates?.[1]
+                        const resLng = res.location?.coordinates?.[0]
+                        const arrived = incidentLatLng && resLat && resLng
+                          ? calculateDistance(resLat, resLng, incidentLatLng[0], incidentLatLng[1]) < 0.1
+                          : false
+
+                        return (
+                          <div key={res._id} className="bg-white border border-zinc-200 rounded-xl p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-bold text-zinc-900 text-sm">{res.item_name}</p>
+                                <p className="text-xs text-zinc-500">{res.category} • {res.quantity} units</p>
+                              </div>
+                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${arrived ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {arrived ? 'ON SCENE' : 'EN ROUTE'}
+                              </span>
+                            </div>
+                            {resLat && resLng && (
+                              <div className="text-[11px] text-zinc-400 font-mono mt-2">
+                                {resLat.toFixed(4)}, {resLng.toFixed(4)}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

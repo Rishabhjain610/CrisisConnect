@@ -21,7 +21,7 @@ const Home = () => {
   // Dynamic Dashboard Link based on Role
   const getDashboardLink = () => {
     if (!userData) return "/login";
-    if (userData.role === "agency") return "/agencyhome";
+    if (userData.role === "agency") return "/agency/dashboard";
     if (userData.role === "coordinator") return "/coordinatorhome";
     return "/citizenhome";
   };
@@ -30,10 +30,11 @@ const Home = () => {
     <div className="min-h-screen bg-white font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* --- HERO SECTION --- */}
       <section className="relative pt-32 pb-20 px-6 lg:px-8 overflow-hidden">
+        <BackgroundRippleEffect />
         {/* Background Decorative Blobs */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-br from-blue-50 to-purple-50 rounded-full blur-3xl opacity-60 -z-10" />
 
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="z-100 relative max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-6">
             <Radio size={14} className="animate-pulse" />
             Live Crisis Response System
@@ -229,6 +230,8 @@ const Home = () => {
       {/* --- CTA SECTION --- */}
       <section className="py-24 px-6">
         <div className="max-w-5xl mx-auto bg-zinc-900 rounded-[2.5rem] p-12 md:p-20 text-center relative overflow-hidden">
+          <div className="absolute inset-0 h-full w-full [--cell-border-color:rgba(255,255,255,0.1)] [--cell-fill-color:transparent]">
+          </div>
           {/* Decorative Glow */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 blur-[100px] opacity-20 rounded-full pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500 blur-[100px] opacity-20 rounded-full pointer-events-none" />
