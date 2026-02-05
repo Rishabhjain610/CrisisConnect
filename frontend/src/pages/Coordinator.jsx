@@ -142,8 +142,18 @@ const Coordinator = () => {
     if (!window.confirm(`Recall all ${resources.length} units to base?`)) return;
     try {
       await Promise.all(resources.map(r =>
-        axios.put(`${serverUrl}/api/resource/${r._id}`, { status: "Available" }, { withCredentials: true })
+        // 🔴 FIX: Changed 'put' to 'patch' AND added '/update/' to the URL
+        // 🔴 FIX: Added 'current_incident: null' to unlink it from the mission
+        axios.patch(
+          `${serverUrl}/api/resource/update/${r._id}`,
+          {
+            status: "Available",
+            current_incident: null
+          },
+          { withCredentials: true }
+        )
       ));
+      toast.success("Units recalled successfully!");
       fetchStats();
     } catch (e) { alert("Error recalling units"); }
   };
