@@ -77,7 +77,7 @@ const App = () => {
         {
           userData && userData.role === "coordinator" && (
             <>
-              <Route path="/coordinatorhome" element={<Coordinator />} />
+              <Route path="/coordinator/dashboard" element={<Coordinator />} />
               <Route path="/coordinator/manage" element={<CoordinatorManage />} />
             </>
           )

@@ -279,17 +279,26 @@ export const getCoordinatorRequests = async (req, res) => {
 };
 
 // 5. Get Request History for Agency Dashboard
+// ✅ GET AGENCY REQUESTS (With "Live Only" Logic)
 export const getAgencyRequests = async (req, res) => {
     try {
         const requests = await Request.find({ agencyId: req.userId })
-            .populate("coordinatorId", "name phone")
-            .populate("incidentId", "type location")
+            .populate("coordinatorId", "name email phone")
+            .populate("incidentId", "type severity status") // We need 'status' to filter
             .sort({ createdAt: -1 });
 
-        return res.status(200).json({ requests });
+        // 🔍 FILTER LOGIC:
+        // Only show requests where the Incident is still "Pending" or "Active".
+        // If it is "Resolved" or "Spam", hide it from the Live Dashboard.
+        const liveRequests = requests.filter(req =>
+            req.incidentId &&
+            (req.incidentId.status === 'Pending' || req.incidentId.status === 'Active')
+        );
+
+        res.status(200).json({ requests: liveRequests });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Error fetching history" });
+        console.error("Get Agency Requests Error:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };
 

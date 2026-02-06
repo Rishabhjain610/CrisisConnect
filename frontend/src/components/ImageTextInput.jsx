@@ -112,99 +112,99 @@ export default function ImageTextInput() {
   //     setLoading(false);
   //   }
   // };
-// --- ORIGINAL LOGIC: Submit ---
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
-  setSuccess(false);
+  // --- ORIGINAL LOGIC: Submit ---
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
 
-  try {
-    if (!coords) {
-      setError("Location not available. Please enable geolocation.");
-      setLoading(false);
-      return;
-    }
-
-    if (!imageFile && !extraText.trim()) {
-      setError("Please provide at least an image or description.");
-      setLoading(false);
-      return;
-    }
-
-    // Convert image file to Base64
-    let imageBase64 = null;
-    if (imageFile) {
-      imageBase64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result); // Full base64 string
-        reader.onerror = reject;
-        reader.readAsDataURL(imageFile);
-      });
-    }
-
-    // Build JSON payload (NOT FormData)
-    const payload = {
-      mode: "IMAGE_TEXT",
-      type: "Other", // or detect from description
-      description: extraText || "Emergency incident reported",
-      transcript: "", // Not used in IMAGE_TEXT mode
-      imageBase64: imageBase64, // Base64 encoded image
-      latitude: Number(coords.lat),
-      longitude: Number(coords.lng),
-      severity: "Medium",
-      language: "en"
-    };
-
-    console.log("📤 Submitting IMAGE_TEXT incident...");
-    console.log("Payload keys:", Object.keys(payload));
-    console.log("Coordinates:", { lat: coords.lat, lng: coords.lng });
-
-    // Get token from localStorage or Redux
-    const token = localStorage.getItem("token"); // Adjust based on your auth setup
-
-    const response = await axios.post(
-      `${serverUrl || "http://localhost:8901"}/api/incident/create`,
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/json", // JSON, NOT FormData
-          Authorization: `Bearer ${token}`, // Include token
-        },
-        withCredentials: true,
+    try {
+      if (!coords) {
+        setError("Location not available. Please enable geolocation.");
+        setLoading(false);
+        return;
       }
-    );
 
-    console.log("✅ Incident created:", response.data);
-    
-    setSuccess(true);
-    setImageFile(null);
-    setExtraText("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
+      if (!imageFile && !extraText.trim()) {
+        setError("Please provide at least an image or description.");
+        setLoading(false);
+        return;
+      }
 
-    toast.success("Incident reported successfully!");
+      // Convert image file to Base64
+      let imageBase64 = null;
+      if (imageFile) {
+        imageBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result); // Full base64 string
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
+      }
 
-    // Redirect after success
-    setTimeout(() => {
-      setSuccess(false);
-      navigate("/citizenhome"); // or your desired redirect
-    }, 2000);
+      // Build JSON payload (NOT FormData)
+      const payload = {
+        mode: "IMAGE_TEXT",
+        type: "Other", // or detect from description
+        description: extraText || "Emergency incident reported",
+        transcript: "", // Not used in IMAGE_TEXT mode
+        imageBase64: imageBase64, // Base64 encoded image
+        latitude: Number(coords.lat),
+        longitude: Number(coords.lng),
+        severity: "Medium",
+        language: "en"
+      };
 
-  } catch (err) {
-    console.error("❌ Submit error:", err);
-    console.error("Error response:", err?.response?.data);
-    
-    const errMsg = err?.response?.data?.message || 
-                   err?.response?.data?.error ||
-                   err?.message || 
-                   "Failed to submit incident";
-    
-    setError(errMsg);
-    toast.error(errMsg);
-  } finally {
-    setLoading(false);
-  }
-};
+      console.log("📤 Submitting IMAGE_TEXT incident...");
+      console.log("Payload keys:", Object.keys(payload));
+      console.log("Coordinates:", { lat: coords.lat, lng: coords.lng });
+
+      // Get token from localStorage or Redux
+      const token = localStorage.getItem("token"); // Adjust based on your auth setup
+
+      const response = await axios.post(
+        `${serverUrl || "http://localhost:8901"}/api/incident/create`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json", // JSON, NOT FormData
+            Authorization: `Bearer ${token}`, // Include token
+          },
+          withCredentials: true,
+        }
+      );
+
+      console.log("✅ Incident created:", response.data);
+
+      setSuccess(true);
+      setImageFile(null);
+      setExtraText("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      toast.success("Incident reported successfully!");
+
+      // Redirect after success
+      setTimeout(() => {
+        setSuccess(false);
+        navigate("/citizenincidents"); // or your desired redirect
+      }, 2000);
+
+    } catch (err) {
+      console.error("❌ Submit error:", err);
+      console.error("Error response:", err?.response?.data);
+
+      const errMsg = err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Failed to submit incident";
+
+      setError(errMsg);
+      toast.error(errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
   // --- NEW UI RENDERING ---
   return (
     <div className="min-h-screen bg-zinc-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">

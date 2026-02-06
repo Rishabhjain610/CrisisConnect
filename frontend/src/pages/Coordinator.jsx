@@ -7,6 +7,7 @@ import {
   MapPin, Clock, ExternalLink, RefreshCw, X, CheckCircle2
 } from "lucide-react";
 import CoordinatorRequests from "../components/CoordinatorRequests";
+import { toast } from 'react-toastify';
 
 // --- Leaflet Imports ---
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -155,7 +156,9 @@ const Coordinator = () => {
       ));
       toast.success("Units recalled successfully!");
       fetchStats();
-    } catch (e) { alert("Error recalling units"); }
+    } catch (e) {
+      toast.error("Failed to recall units. Check console.");
+    }
   };
 
   return (

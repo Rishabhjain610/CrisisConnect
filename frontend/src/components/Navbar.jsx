@@ -42,7 +42,7 @@ const Navbar = () => {
     ];
   } else if (userData.role === "coordinator") {
     navLinks = [
-      { name: "Dashboard", href: "/coordinatorhome", icon: <IoGridOutline size={18} /> },
+      { name: "Dashboard", href: "/coordinator/dashboard", icon: <IoGridOutline size={18} /> },
       { name: "Inventory", href: "/coordinator/manage", icon: <IoCubeOutline size={18} /> },
     ];
   }

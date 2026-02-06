@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthDataContext } from "../context/AuthDataContext";
 import {
@@ -148,9 +148,19 @@ const adjustBrightness = (color, percent) => {
 };
 
 // ✅ MAP CONTROLLER - PREVENTS ZOOM ISSUES
-function MapController({ incidents, resources }) {
+function MapController({ incidents, resources, zoomTarget }) {
   const map = useMap();
   const hasSetBounds = useRef(false);
+
+  // Handle zoom to specific location
+  useEffect(() => {
+    if (zoomTarget) {
+      map.setView([zoomTarget.lat, zoomTarget.lon], 16, {
+        animate: true,
+        duration: 1.5
+      });
+    }
+  }, [zoomTarget, map]);
 
   useEffect(() => {
     if (!hasSetBounds.current && (incidents?.length > 0 || resources?.length > 0)) {
@@ -197,7 +207,7 @@ function MapController({ incidents, resources }) {
 }
 
 // ✅ TACTICAL MAP WITH INCIDENTS & RESOURCES
-const TacticalMap = ({ incidents, resources }) => {
+const TacticalMap = ({ incidents, resources, zoomTarget }) => {
   const defaultCenter = [19.0760, 72.8777];
 
   return (
@@ -364,7 +374,7 @@ const TacticalMap = ({ incidents, resources }) => {
         </LayersControl.Overlay>
       </LayersControl>
 
-      <MapController incidents={incidents} resources={resources} />
+      <MapController incidents={incidents} resources={resources} zoomTarget={zoomTarget} />
     </MapContainer>
   );
 };
@@ -385,6 +395,7 @@ const Agency = () => {
   const [resources, setResources] = useState([]);
 
   const [sentRequests, setSentRequests] = useState([]);
+  const [mapZoomTarget, setMapZoomTarget] = useState(null);
 
   const severityPreset = {
     Low: 1,
@@ -487,29 +498,16 @@ const Agency = () => {
   const fetchIncidents = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${serverUrl}/api/incident/list`, {
-        withCredentials: true,
-      });
-
+      const res = await axios.get(`${serverUrl}/api/incident/list`, { withCredentials: true });
       const all = res.data.incidents || [];
 
-      // ✅ FIX: Include 'Active' so they don't disappear after Acknowledging
+      // ✅ MODIFIED: SORT BY DATE DESCENDING (Newest First)
       const visibleIncidents = all
         .filter((i) => i.status === "Pending" || i.status === "Active")
-        .sort((a, b) => {
-          // Sort Priority: Pending first, then Active
-          if (a.status === "Pending" && b.status !== "Pending") return -1;
-          if (a.status !== "Pending" && b.status === "Pending") return 1;
-
-          // Then by Trust Score
-          const scoreA = typeof a.trustScore === 'object' ? a.trustScore.totalScore || 0 : a.trustScore || 0;
-          const scoreB = typeof b.trustScore === 'object' ? b.trustScore.totalScore || 0 : b.trustScore || 0;
-          return scoreB - scoreA;
-        });
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       setAllIncidents(all);
-      setPendingIncidents(visibleIncidents); // Updates the Left Panel List
-
+      setPendingIncidents(visibleIncidents);
       if (visibleIncidents.length > 0 && !selectedIncident) {
         setSelectedIncident(visibleIncidents[0]);
       }
@@ -682,7 +680,7 @@ const Agency = () => {
 
   return (
     <div className="min-h-screen pt-16 bg-gradient-to-br from-gray-50 to-gray-100">
-      <ToastContainer position="top-right" autoClose={3000} />
+      {/* <ToastContainer position="top-right" autoClose={3000} /> */}
       <div className="min-h-screen flex flex-col">
         {/* Header */}
         <header className="flex-shrink-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
@@ -864,19 +862,29 @@ const Agency = () => {
                           )}
 
                           <div className="flex items-center justify-between mt-6">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm text-gray-500">
-                                {new Date(
-                                  incident.createdAt
-                                ).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs text-gray-400 font-medium">
+                                {new Date(incident.createdAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
                                 })}
                               </span>
-                              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                              <span className="text-sm text-green-600 font-medium">
-                                Live
-                              </span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {new Date(
+                                    incident.createdAt
+                                  ).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true
+                                  })}
+                                </span>
+                                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                                <span className="text-sm text-green-600 font-medium">
+                                  Live
+                                </span>
+                              </div>
                             </div>
 
                             <div className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
@@ -927,7 +935,7 @@ const Agency = () => {
                 </div>
               </div>
               <div className={`h-[calc(100%-60px)] ${showDispatchModal ? 'pointer-events-none opacity-50' : ''}`}>
-                <TacticalMap incidents={allIncidents} resources={resources} />
+                <TacticalMap incidents={allIncidents} resources={resources} zoomTarget={mapZoomTarget} />
               </div>
             </div>
 
@@ -1013,6 +1021,54 @@ const Agency = () => {
                                   </p>
                                 </div>
                               )}
+
+                            {/* Reported By */}
+                            <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
+                              <p className="text-sm text-gray-700">
+                                <span className="font-semibold text-gray-600">
+                                  👤 Reported by:{" "}
+                                </span>
+                                <span className="font-medium text-gray-900">
+                                  {selectedIncident.reportedBy?.name || "Unknown"}
+                                </span>
+                                {selectedIncident.reportedBy?.phone && (
+                                  <span className="text-gray-500 ml-2">
+                                    ({selectedIncident.reportedBy.phone})
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+
+                            {/* Location */}
+                            <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm text-gray-700">
+                                  <span className="font-semibold text-gray-600">
+                                    📍 Location:{" "}
+                                  </span>
+                                  <span className="font-mono text-gray-900">
+                                    {selectedIncident.location?.coordinates?.[1]?.toFixed(4)}, {selectedIncident.location?.coordinates?.[0]?.toFixed(4)}
+                                  </span>
+                                </p>
+                                <button
+                                  onClick={() => {
+                                    setMapZoomTarget({
+                                      lat: selectedIncident.location.coordinates[1],
+                                      lon: selectedIncident.location.coordinates[0]
+                                    });
+                                    // Reset zoom target after a delay to allow re-triggering
+                                    setTimeout(() => setMapZoomTarget(null), 2000);
+                                  }}
+                                  className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  See on Map
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
