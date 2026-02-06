@@ -1487,7 +1487,7 @@ export const groupIncidentByLocationAndType = async (req, res) => {
     }
 
     // Validate search radius
-    const validRadii = [10, 20, 50, 100, 500, 1000];
+    const validRadii = [10, 20, 50, 100, 500, 1000, 5000, 10000];
     const searchRadiusMeters = Number(radius);
 
     if (!validRadii.includes(searchRadiusMeters)) {
@@ -1506,7 +1506,7 @@ export const groupIncidentByLocationAndType = async (req, res) => {
     }
 
     console.log(`   📍 Location: (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
-    console.log(`   📏 Search Radius: ${searchRadiusMeters}m`);
+    console.log(`   📏 Search Radius: ${searchRadiusMeters}m (${(searchRadiusMeters / 1000).toFixed(1)}km)`);
     console.log(`   🔗 Cluster Radius (within same incident): ${clusterRadiusMeters}m`);
 
     // ==================== DEBUG: Check all incidents in DB ====================
@@ -1556,13 +1556,32 @@ export const groupIncidentByLocationAndType = async (req, res) => {
     if (incidents.length > 0) {
       console.log(`   📍 First incident location:`, incidents[0].location);
       console.log(`   📍 Query center: [${lon}, ${lat}]`);
+      console.log(`   ✅ INCIDENTS FOUND! Ready to cluster...`);
     } else {
       console.log(`   ⚠️ NO INCIDENTS FOUND - checking search area...`);
       // Check if there are ANY non-spam incidents with location
       const anyNonSpam = await Incident.findOne({ status: { $ne: "Spam" }, location: { $exists: true } });
       if (anyNonSpam) {
         console.log(`   📍 Sample non-spam incident location:`, anyNonSpam.location);
-        console.log(`   💡 The issue might be that incidents are NOT in the search radius from (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+        console.log(`   📏 Sample is at: [${anyNonSpam.location.coordinates[0]}, ${anyNonSpam.location.coordinates[1]}]`);
+        console.log(`   📏 Query is at:  [${lon}, ${lat}]`);
+
+        // Calculate distance to sample
+        const R = 6371;
+        const dLat = ((anyNonSpam.location.coordinates[1] - lat) * Math.PI) / 180;
+        const dLon = ((anyNonSpam.location.coordinates[0] - lon) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat * Math.PI) / 180) *
+          Math.cos((anyNonSpam.location.coordinates[1] * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distanceKm = R * c;
+        const distanceMeters = Math.round(distanceKm * 1000);
+
+        console.log(`   💡 Sample incident is ${distanceMeters}m away (search radius is ${searchRadiusMeters}m)`);
+        console.log(`   💡 Try increasing the search radius if your incidents are spread out`);
       } else {
         console.log(`   💡 No non-spam incidents with location found in database`);
       }

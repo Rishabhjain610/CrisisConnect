@@ -400,7 +400,7 @@ const Agency = () => {
   // ✅ GROUPED INCIDENTS VIEW
   const [viewMode, setViewMode] = useState("list"); // "list" or "grouped"
   const [groupedIncidents, setGroupedIncidents] = useState([]);
-  const [groupingRadius, setGroupingRadius] = useState(100); // meters
+  const [groupingRadius, setGroupingRadius] = useState(5000); // meters (5km = practical city range)
 
   const severityPreset = {
     Low: 1,
@@ -858,15 +858,18 @@ const Agency = () => {
                   </button>
                   {viewMode === "grouped" && (
                     <div className="ml-auto flex items-center gap-2">
-                      <label className="text-xs text-gray-600 font-medium">Radius (m):</label>
-                      <input
-                        type="number"
+                      <label className="text-xs text-gray-600 font-medium">Search Radius:</label>
+                      <select
                         value={groupingRadius}
-                        onChange={(e) => setGroupingRadius(Math.max(10, Number(e.target.value) || 100))}
-                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                        min="10"
-                        max="1000"
-                      />
+                        onChange={(e) => setGroupingRadius(Number(e.target.value))}
+                        className="px-3 py-1 border border-gray-300 rounded text-sm bg-white"
+                      >
+                        <option value={100}>100m</option>
+                        <option value={500}>500m</option>
+                        <option value={1000}>1km</option>
+                        <option value={5000}>5km (Default)</option>
+                        <option value={10000}>10km</option>
+                      </select>
                     </div>
                   )}
                 </div>
