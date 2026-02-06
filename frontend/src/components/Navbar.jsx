@@ -62,7 +62,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-1 group">
             <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:shadow-blue-500/50 transition-all">
-              <img src="/connection.png" alt="logo" width={42} height={42} />
+              <img src="https://res.cloudinary.com/dkpgnq7ym/image/upload/v1770376030/connection_ilu3aa.png" alt="logo" width={42} height={42} />
             </div>
             <span className="text-gray-900 font-bold text-lg hidden sm:inline-block group-hover:text-blue-600 transition">
               CrisisConnect

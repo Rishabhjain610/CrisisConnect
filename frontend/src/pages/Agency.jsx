@@ -498,7 +498,7 @@ const Agency = () => {
   const fetchIncidents = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${serverUrl}/api/incident/list`, { withCredentials: true });
+      const res = await axios.get(`${serverUrl}/api/incident/list?limit=100`, { withCredentials: true });
       const all = res.data.incidents || [];
 
       // ✅ MODIFIED: SORT BY DATE DESCENDING (Newest First)
@@ -769,14 +769,14 @@ const Agency = () => {
                       Review and prioritize incoming incidents
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  {/* <div className="flex items-center gap-2">
                     <div className="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-full text-xs font-medium border border-yellow-200">
-                      {pendingIncidents.filter(i => i.status === "Pending").length} pending
+                      {pendingIncidents.filter(i => i.status === "Pending").length} pending (all-time)
                     </div>
                     <div className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">
                       {pendingIncidents.filter(i => i.status === "Active").length} active
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -1255,7 +1255,7 @@ const Agency = () => {
                 System Active
               </span>
               <span>•</span>
-              <span>{pendingIncidents.length} pending incidents</span>
+              <span>{pendingIncidents.length} active/pending incidents (all-time)</span>
             </div>
           </div>
         </footer>
@@ -1497,7 +1497,7 @@ const Agency = () => {
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
-                            Dispatch Resources
+                            Send Request
                           </button>
                         </div>
                       </>

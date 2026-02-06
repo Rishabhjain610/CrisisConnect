@@ -216,7 +216,7 @@ const AnalyticsPage = () => {
           <>
 
             {/* Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
               <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-red-50 rounded-lg">
@@ -265,7 +265,7 @@ const AnalyticsPage = () => {
                 <p className="text-gray-600 text-sm mt-1">Active Incidents</p>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+              {/* <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-indigo-50 rounded-lg">
                     <MapPin className="w-6 h-6 text-indigo-600" />
@@ -274,8 +274,8 @@ const AnalyticsPage = () => {
                 </div>
                 <div className="text-3xl font-bold text-gray-900">{summary.pending || 0}</div>
                 <p className="text-gray-600 text-sm mt-1">Pending Incidents</p>
-              </div>
-
+              </div> */}
+              {/* 
               <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-emerald-50 rounded-lg">
@@ -287,7 +287,7 @@ const AnalyticsPage = () => {
                   {formatPercent(summary.autoDispatchRate || 0)}
                 </div>
                 <p className="text-gray-600 text-sm mt-1">Auto-dispatch Rate</p>
-              </div>
+              </div> */}
             </div>
 
             {/* Insight Highlights */}
@@ -554,7 +554,7 @@ const AnalyticsPage = () => {
             </div>
 
             {/* Operations & Resource Readiness */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                 <div className="mb-6">
                   <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -573,7 +573,7 @@ const AnalyticsPage = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+              {/* <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                 <div className="mb-6">
                   <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                     <Users className="w-5 h-5 text-purple-600" />
@@ -589,7 +589,7 @@ const AnalyticsPage = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </div> */}
 
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                 <div className="mb-6">
