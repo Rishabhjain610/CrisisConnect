@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 
 const Language = () => {
   useEffect(() => {
-    
+
     window.googleTranslateElementInit = () => {
       // Only initialize if element exists and not already initialized
       const element = document.getElementById('google_translate_element');
@@ -10,9 +10,9 @@ const Language = () => {
         new window.google.translate.TranslateElement(
           {
             pageLanguage: "en",
-            includedLanguages: "en,fr,de,es,it,pt,hi,ja,ko,zh,ar,ru,mr",
+            includedLanguages: "en,bn,it,gu,hi,zh,ar,ru,mr",
             layout: window.google.translate.TranslateElement.InlineLayout.VERTICAL,
-            
+
           },
           "google_translate_element"
         );
@@ -42,9 +42,9 @@ const Language = () => {
 
   return (
     <div>
-     
+
       <div id="google_translate_element" className='text-white bg-white sm:bg-transparent'></div>
-     
+
     </div>
   );
 };

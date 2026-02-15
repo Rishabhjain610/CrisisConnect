@@ -835,7 +835,7 @@ const Agency = () => {
                 </div>
                 {/* VIEW MODE TOGGLE */}
                 <div className="flex items-center gap-3">
-                  <button
+                  {/* <button
                     onClick={() => setViewMode("list")}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "list"
                       ? "bg-blue-500 text-white shadow-md"
@@ -843,7 +843,8 @@ const Agency = () => {
                       }`}
                   >
                     📋 List View
-                  </button>
+                  </button> */}
+                  {/*
                   <button
                     onClick={() => {
                       setViewMode("grouped");
@@ -872,6 +873,7 @@ const Agency = () => {
                       </select>
                     </div>
                   )}
+                  */}
                 </div>
               </div>
 
@@ -998,120 +1000,7 @@ const Agency = () => {
                         </div>
                       )}
                     </>
-                  ) : (
-                    /* GROUPED VIEW */
-                    <>
-                      {loading ? (
-                        <div className="flex flex-col items-center justify-center py-24">
-                          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mb-4"></div>
-                          <p className="text-gray-500 text-lg">Grouping incidents...</p>
-                        </div>
-                      ) : groupedIncidents.length === 0 ? (
-                        <div className="text-center py-24">
-                          <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <span className="text-4xl">🔍</span>
-                          </div>
-                          <h3 className="text-xl font-semibold text-blue-700 mb-3">
-                            No Grouped Incidents
-                          </h3>
-                          <p className="text-gray-600 text-lg">
-                            No incidents found in the current grouping radius
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-6">
-                          {groupedIncidents.map((typeGroup) => (
-                            <div key={typeGroup.type} className="border-l-4 border-blue-500 pl-4">
-                              <div className="flex items-center gap-3 mb-3">
-                                <span className="text-3xl">{getTypeIcon(typeGroup.type)}</span>
-                                <div>
-                                  <h3 className="text-lg font-bold text-gray-900">
-                                    {typeGroup.type}
-                                  </h3>
-                                  <p className="text-xs text-gray-500">
-                                    {typeGroup.totalCount} incidents • {typeGroup.clusters?.length || 0} cluster{typeGroup.clusters?.length !== 1 ? 's' : ''}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="space-y-3">
-                                {typeGroup.clusters?.map((cluster, clusterIdx) => (
-                                  <div key={`${typeGroup.type}-${clusterIdx}`} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                    <div className="flex items-center justify-between mb-3">
-                                      <div className="flex items-center gap-2">
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold">
-                                          {cluster.count} incident{cluster.count !== 1 ? 's' : ''}
-                                        </span>
-                                        {cluster.isDuplicate && (
-                                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold flex items-center gap-1">
-                                            ⚠️ Duplicate
-                                          </span>
-                                        )}
-                                        <span className="text-xs text-gray-500">
-                                          📍 ({Number(cluster.centerLocation.latitude).toFixed(4)}, {Number(cluster.centerLocation.longitude).toFixed(4)})
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      {cluster.incidents?.map((incident, incIdx) => (
-                                        <div
-                                          key={incident._id}
-                                          onClick={() => setSelectedIncident(incident)}
-                                          className={`p-3 bg-white rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${selectedIncident?._id === incident._id
-                                            ? "border-blue-500 bg-blue-50"
-                                            : "border-gray-200 hover:border-gray-300"
-                                            }`}
-                                        >
-                                          <div className="flex items-center justify-between gap-2">
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2">
-                                                <span
-                                                  className={`px-2 py-0.5 rounded text-xs font-bold ${getSeverityColor(incident.severity)}`}
-                                                >
-                                                  {incident.severity}
-                                                </span>
-                                                <span className="text-xs font-semibold text-gray-900">
-                                                  {new Date(incident.createdAt).toLocaleTimeString([], {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                    hour12: true
-                                                  })}
-                                                </span>
-                                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${incident.status === "Resolved"
-                                                  ? "bg-green-100 text-green-700"
-                                                  : incident.status === "Active"
-                                                    ? "bg-blue-100 text-blue-700"
-                                                    : "bg-yellow-100 text-yellow-700"
-                                                  }`}>
-                                                  {incident.status}
-                                                </span>
-                                              </div>
-                                              <p className="text-sm text-gray-600 mt-1">
-                                                Trust: <span className="font-semibold text-gray-900">
-                                                  {typeof incident.trustScore === 'object' ? incident.trustScore.totalScore : incident.trustScore || 'N/A'}/100
-                                                </span>
-                                              </p>
-                                              {incIdx === 0 && cluster.count > 1 && (
-                                                <p className="text-xs text-gray-500 mt-1">Position: Center of cluster</p>
-                                              )}
-                                            </div>
-                                            <div className="text-xs text-blue-600 font-bold">
-                                              #{incIdx + 1}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
+                  ) : null /* Grouped view temporarily disabled */}
                 </div>
               </div>
             </div>
