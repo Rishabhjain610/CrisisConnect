@@ -4,6 +4,12 @@
 
 A sophisticated platform for rapid disaster response that connects citizens, emergency agencies, and coordinators in a unified ecosystem. Features AI-driven incident verification, deepfake detection, intelligent resource allocation, and real-time coordination.
 
+## 🎬 Demo Video
+
+**[PLACEHOLDER: Link to demo video]**
+
+_Demo shows: Incident reporting → AI verification → Dispatch → Real-time dashboards → Resolution_
+
 ## ✨ Key Features
 
 - **Multi-Modal Incident Reporting** - Voice (SOS), image/text, and accelerometer-based reporting
@@ -137,14 +143,6 @@ auth/
 3. **Auto-Dispatch**: High-confidence incidents automatically dispatch nearest resources
 4. **Real-Time Coordination**: Agencies track response, coordinators allocate resources
 5. **Event Resolution**: Incident closed with full audit trail and analytics
-
----
-
-## 🎬 Demo Video
-
-**[PLACEHOLDER: Link to demo video]**
-
-_Demo shows: Incident reporting → AI verification → Dispatch → Real-time dashboards → Resolution_
 
 ---
 
