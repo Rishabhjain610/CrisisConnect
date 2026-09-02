@@ -48,7 +48,7 @@ export const determinePriorityCode = async (
   longitude
 ) => {
   console.log("\n\n" + "█".repeat(70));
-  console.log("█  PHASE 5: PRIORITY CODE DETERMINATION");
+  console.log("█  PRIORITY CODE DETERMINATION");
   console.log("█".repeat(70));
 
   const score = trustScore.totalScore || 0;

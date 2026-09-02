@@ -54,9 +54,9 @@ _Demo shows: Incident reporting → AI verification → Dispatch → Real-time d
 
 ---
 
-## 🔬 Multi-Modal Incident Verification Pipeline (4 Phases + Priority Coding)
+## 🔬 Multi-Modal Incident Verification Pipeline (4-Phase Architecture)
 
-When an emergency report is submitted (via **Voice SOS**, **Image + Text**, or **Shake-to-Report**), the backend executes a deterministic 5-step analysis pipeline:
+When an emergency report is submitted (via **Voice SOS**, **Image + Text**, or **Shake-to-Report**), the backend executes a deterministic 4-phase analysis pipeline:
 
 ```
 [ Incoming Incident Data ]
@@ -87,21 +87,11 @@ When an emergency report is submitted (via **Voice SOS**, **Image + Text**, or *
    └────────────────────────┬───────────────────────────────────────────────┘
                             ▼
    ┌────────────────────────────────────────────────────────────────────────┐
-   │ PHASE 4: TRUST SCORING & GEOSPATIAL CONSENSUS                          │
-   │  • Formula A: Image + Text Mode (Visual 50% + Align 20% + Consensus 30%)│
-   │  • Formula B: Voice SOS Mode (Keywords 50% + Sentiment 20% + Consensus 30%)│
-   │  • Formula C: Hybrid Shake Mode (Handles pocket occlusions & live mic) │
-   │  • Geospatial Consensus: MongoDB 2dsphere radius query (1km / 15 mins) │
-   └────────────────────────┬───────────────────────────────────────────────┘
-                            ▼
-   ┌────────────────────────────────────────────────────────────────────────┐
-   │ PHASE 5: INTELLIGENT PRIORITY CODING & DISPATCH DECISION               │
-   │  • OMEGA: Mass Calamity (>= 10 reports/min within 1km)                 │
-   │  • DELTA: Life-threatening / Trapped / Structural collapse             │
-   │  • CHARLIE: Fire / Flood / Multi-casualty                              │
-   │  • BRAVO: Moderate emergency                                           │
-   │  • ALPHA: Low-risk / Informational report                              │
-   │  • X-RAY: Flagged Spam / Synthetic AI deepfake detected                │
+   │ PHASE 4: TRUST SCORING, PRIORITY CODING & DISPATCH DECISION            │
+   │  • Formula A / B / C: Multimodal score weighted with realism & format  │
+   │  • Location Consensus: MongoDB 2dsphere radius query (1km / 15 mins)   │
+   │  • Priority Hierarchy: OMEGA (Velocity), DELTA, CHARLIE, BRAVO, ALPHA  │
+   │  • Synthetic Spam Isolation: Flags AI deepfakes as X-RAY               │
    └────────────────────────┬───────────────────────────────────────────────┘
                             ▼
                  [ Auto-Dispatch & Alert ]

@@ -453,9 +453,9 @@ export const createIncident = async (req, res) => {
       result: trustScoreData,
     });
 
-    // ==================== PHASE 5: PRIORITY CODING ====================
+    // ==================== PRIORITY CODING & DISPATCH ====================
     console.log("\n" + "=".repeat(60));
-    console.log("PHASE 5: PRIORITY CODING");
+    console.log("PRIORITY CODING & DISPATCH");
     console.log("=".repeat(60));
 
     let priorityCode = {

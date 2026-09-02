@@ -87,7 +87,7 @@ const incidentSchema = new mongoose.Schema(
       },
     },
 
-    // ==================== PRIORITY CODING (PHASE 5) ====================
+    // ==================== PRIORITY CODING & DISPATCH ====================
     priorityCode: {
       code: String, // "OMEGA", "ECHO", "DELTA", "CHARLIE", "X-RAY"
       description: String,
